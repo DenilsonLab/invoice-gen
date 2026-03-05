@@ -21,15 +21,16 @@ const authenticate = (req: any, res: any, next: any) => {
 };
 
 // Get all invoices for user
-router.get('/', authenticate, (req: any, res: any) => {
+router.get('/', authenticate, async (req: any, res: any) => {
   const userId = req.user.id;
   try {
-    const invoices = db.prepare('SELECT * FROM invoices WHERE userId = ? ORDER BY updatedAt DESC').all(userId);
+    const resDb = await db.execute({ sql: 'SELECT * FROM invoices WHERE userId = ? ORDER BY updatedAt DESC', args: [userId] });
+    const invoices = resDb.rows;
     res.json(invoices.map((inv: any) => ({
       ...inv,
-      data: JSON.parse(inv.data),
-      layout: JSON.parse(inv.layout),
-      settings: JSON.parse(inv.settings)
+      data: JSON.parse(inv.data as string),
+      layout: JSON.parse(inv.layout as string),
+      settings: JSON.parse(inv.settings as string)
     })));
   } catch (error) {
     res.status(500).json({ error: 'Server error' });
@@ -37,18 +38,20 @@ router.get('/', authenticate, (req: any, res: any) => {
 });
 
 // Get single invoice
-router.get('/:id', authenticate, (req: any, res: any) => {
+router.get('/:id', authenticate, async (req: any, res: any) => {
   const userId = req.user.id;
   const invoiceId = req.params.id;
   try {
-    const invoice = db.prepare('SELECT * FROM invoices WHERE id = ? AND userId = ?').get(invoiceId, userId) as any;
+    const resDb = await db.execute({ sql: 'SELECT * FROM invoices WHERE id = ? AND userId = ?', args: [invoiceId, userId] });
+    const invoice = resDb.rows[0] as any;
     if (!invoice) return res.status(404).json({ error: 'Invoice not found' });
-    
+
     res.json({
       ...invoice,
-      data: JSON.parse(invoice.data),
-      layout: JSON.parse(invoice.layout),
-      settings: JSON.parse(invoice.settings)
+      // Create new object to avoid sending the unparsed JSON strings along with parsed object properties
+      data: JSON.parse(invoice.data as string),
+      layout: JSON.parse(invoice.layout as string),
+      settings: JSON.parse(invoice.settings as string)
     });
   } catch (error) {
     res.status(500).json({ error: 'Server error' });
@@ -56,16 +59,19 @@ router.get('/:id', authenticate, (req: any, res: any) => {
 });
 
 // Create new invoice
-router.post('/', authenticate, (req: any, res: any) => {
+router.post('/', authenticate, async (req: any, res: any) => {
   const userId = req.user.id;
   const { title, data, layout, settings } = req.body;
   const id = uuidv4();
 
   try {
-    db.prepare(`
-      INSERT INTO invoices (id, userId, title, data, layout, settings)
-      VALUES (?, ?, ?, ?, ?, ?)
-    `).run(id, userId, title, JSON.stringify(data), JSON.stringify(layout), JSON.stringify(settings));
+    await db.execute({
+      sql: `
+        INSERT INTO invoices (id, userId, title, data, layout, settings)
+        VALUES (?, ?, ?, ?, ?, ?)
+      `,
+      args: [id, userId, title, JSON.stringify(data), JSON.stringify(layout), JSON.stringify(settings)]
+    });
 
     res.json({ id, title, data, layout, settings });
   } catch (error) {
@@ -74,20 +80,23 @@ router.post('/', authenticate, (req: any, res: any) => {
 });
 
 // Update invoice
-router.put('/:id', authenticate, (req: any, res: any) => {
+router.put('/:id', authenticate, async (req: any, res: any) => {
   const userId = req.user.id;
   const invoiceId = req.params.id;
   const { title, data, layout, settings } = req.body;
 
   try {
-    const info = db.prepare(`
-      UPDATE invoices 
-      SET title = ?, data = ?, layout = ?, settings = ?, updatedAt = CURRENT_TIMESTAMP
-      WHERE id = ? AND userId = ?
-    `).run(title, JSON.stringify(data), JSON.stringify(layout), JSON.stringify(settings), invoiceId, userId);
+    const info = await db.execute({
+      sql: `
+        UPDATE invoices 
+        SET title = ?, data = ?, layout = ?, settings = ?, updatedAt = CURRENT_TIMESTAMP
+        WHERE id = ? AND userId = ?
+      `,
+      args: [title, JSON.stringify(data), JSON.stringify(layout), JSON.stringify(settings), invoiceId, userId]
+    });
 
-    if (info.changes === 0) return res.status(404).json({ error: 'Invoice not found or unauthorized' });
-    
+    if (info.rowsAffected === 0) return res.status(404).json({ error: 'Invoice not found or unauthorized' });
+
     res.json({ id: invoiceId, title, data, layout, settings });
   } catch (error) {
     res.status(500).json({ error: 'Server error' });
@@ -95,14 +104,14 @@ router.put('/:id', authenticate, (req: any, res: any) => {
 });
 
 // Delete invoice
-router.delete('/:id', authenticate, (req: any, res: any) => {
+router.delete('/:id', authenticate, async (req: any, res: any) => {
   const userId = req.user.id;
   const invoiceId = req.params.id;
 
   try {
-    const info = db.prepare('DELETE FROM invoices WHERE id = ? AND userId = ?').run(invoiceId, userId);
-    if (info.changes === 0) return res.status(404).json({ error: 'Invoice not found or unauthorized' });
-    
+    const info = await db.execute({ sql: 'DELETE FROM invoices WHERE id = ? AND userId = ?', args: [invoiceId, userId] });
+    if (info.rowsAffected === 0) return res.status(404).json({ error: 'Invoice not found or unauthorized' });
+
     res.json({ message: 'Invoice deleted' });
   } catch (error) {
     res.status(500).json({ error: 'Server error' });

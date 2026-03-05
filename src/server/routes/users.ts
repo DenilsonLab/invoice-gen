@@ -20,25 +20,33 @@ const authenticate = (req: any, res: any, next: any) => {
 };
 
 // Update profile
-router.put('/profile', authenticate, (req: any, res: any) => {
+router.put('/profile', authenticate, async (req: any, res: any) => {
   const { firstName, lastName, username, preferredCurrency, companyName, companyEmail, companyPhone, companyAddress, bankAddress } = req.body;
   const userId = req.user.id;
 
   try {
     // Check if username is taken by another user
-    const existingUsername = db.prepare('SELECT id FROM users WHERE username = ? AND id != ?').get(username, userId);
+    const resUsername = await db.execute({ sql: 'SELECT id FROM users WHERE username = ? AND id != ?', args: [username, userId] });
+    const existingUsername = resUsername.rows[0];
     if (existingUsername) {
       return res.status(400).json({ error: 'Username already taken' });
     }
 
-    db.prepare(`
-      UPDATE users 
-      SET firstName = ?, lastName = ?, username = ?, preferredCurrency = ?, companyName = ?, companyEmail = ?, companyPhone = ?, companyAddress = ?, bankAddress = ?
-      WHERE id = ?
-    `).run(firstName, lastName, username, preferredCurrency, companyName, companyEmail, companyPhone, companyAddress, bankAddress, userId);
+    await db.execute({
+      sql: `
+        UPDATE users 
+        SET firstName = ?, lastName = ?, username = ?, preferredCurrency = ?, companyName = ?, companyEmail = ?, companyPhone = ?, companyAddress = ?, bankAddress = ?
+        WHERE id = ?
+      `,
+      args: [firstName, lastName, username, preferredCurrency, companyName, companyEmail, companyPhone, companyAddress, bankAddress, userId]
+    });
 
-    const user = db.prepare('SELECT id, email, firstName, lastName, username, preferredCurrency, companyName, companyEmail, companyPhone, companyAddress, bankAddress FROM users WHERE id = ?').get(userId);
-    res.json(user);
+    const resUser = await db.execute({
+      sql: 'SELECT id, email, firstName, lastName, username, preferredCurrency, companyName, companyEmail, companyPhone, companyAddress, bankAddress FROM users WHERE id = ?',
+      args: [userId]
+    });
+    const user = resUser.rows[0];
+    res.json(Object.assign({}, user));
   } catch (error) {
     res.status(500).json({ error: 'Server error' });
   }
@@ -50,19 +58,20 @@ router.put('/password', authenticate, async (req: any, res: any) => {
   const userId = req.user.id;
 
   try {
-    const user = db.prepare('SELECT password FROM users WHERE id = ?').get(userId) as any;
+    const resDb = await db.execute({ sql: 'SELECT password FROM users WHERE id = ?', args: [userId] });
+    const user = resDb.rows[0] as any;
     if (!user || !user.password) {
       return res.status(400).json({ error: 'El usuario no tiene una contraseña configurada (posiblemente inició sesión con Google)' });
     }
 
     const bcrypt = require('bcryptjs');
-    const isMatch = await bcrypt.compare(currentPassword, user.password);
+    const isMatch = await bcrypt.compare(currentPassword, user.password as string);
     if (!isMatch) {
       return res.status(400).json({ error: 'La contraseña actual es incorrecta' });
     }
 
     const hashedPassword = await bcrypt.hash(newPassword, 10);
-    db.prepare('UPDATE users SET password = ? WHERE id = ?').run(hashedPassword, userId);
+    await db.execute({ sql: 'UPDATE users SET password = ? WHERE id = ?', args: [hashedPassword, userId] });
 
     res.json({ message: 'Contraseña actualizada exitosamente' });
   } catch (error) {

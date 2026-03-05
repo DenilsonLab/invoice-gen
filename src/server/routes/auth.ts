@@ -11,7 +11,8 @@ const JWT_SECRET = process.env.JWT_SECRET || 'super-secret-key-for-dev';
 router.post('/register', async (req, res) => {
   const { email, password, firstName, lastName } = req.body;
   try {
-    const existingUser = db.prepare('SELECT * FROM users WHERE email = ?').get(email);
+    const resDb = await db.execute({ sql: 'SELECT * FROM users WHERE email = ?', args: [email] });
+    const existingUser = resDb.rows[0];
     if (existingUser) {
       return res.status(400).json({ error: 'Email already exists' });
     }
@@ -20,10 +21,13 @@ router.post('/register', async (req, res) => {
     const id = uuidv4();
     const username = email.split('@')[0] + Math.floor(Math.random() * 1000);
 
-    db.prepare(`
-      INSERT INTO users (id, email, password, firstName, lastName, username)
-      VALUES (?, ?, ?, ?, ?, ?)
-    `).run(id, email, hashedPassword, firstName, lastName, username);
+    await db.execute({
+      sql: `
+        INSERT INTO users (id, email, password, firstName, lastName, username)
+        VALUES (?, ?, ?, ?, ?, ?)
+      `,
+      args: [id, email, hashedPassword, firstName, lastName, username]
+    });
 
     const token = jwt.sign({ id }, JWT_SECRET, { expiresIn: '7d' });
     res.cookie('token', token, { httpOnly: true, secure: true, sameSite: 'none' });
@@ -37,24 +41,25 @@ router.post('/register', async (req, res) => {
 router.post('/login', async (req, res) => {
   const { email, password } = req.body;
   try {
-    const user = db.prepare('SELECT * FROM users WHERE email = ?').get(email) as any;
+    const resDb = await db.execute({ sql: 'SELECT * FROM users WHERE email = ?', args: [email] });
+    const user = resDb.rows[0] as any;
     if (!user || !user.password) {
       return res.status(400).json({ error: 'Invalid credentials' });
     }
 
-    const isMatch = await bcrypt.compare(password, user.password);
+    const isMatch = await bcrypt.compare(password, user.password as string);
     if (!isMatch) {
       return res.status(400).json({ error: 'Invalid credentials' });
     }
 
     const token = jwt.sign({ id: user.id }, JWT_SECRET, { expiresIn: '7d' });
     res.cookie('token', token, { httpOnly: true, secure: true, sameSite: 'none' });
-    res.json({ 
-      id: user.id, 
-      email: user.email, 
-      firstName: user.firstName, 
-      lastName: user.lastName, 
-      username: user.username, 
+    res.json({
+      id: user.id,
+      email: user.email,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      username: user.username,
       preferredCurrency: user.preferredCurrency,
       companyName: user.companyName,
       companyEmail: user.companyEmail,
@@ -74,15 +79,21 @@ router.post('/logout', (req, res) => {
 });
 
 // Me (Get current user)
-router.get('/me', (req, res) => {
+router.get('/me', async (req, res) => {
   const token = req.cookies.token;
   if (!token) return res.status(401).json({ error: 'Not authenticated' });
 
   try {
     const decoded = jwt.verify(token, JWT_SECRET) as any;
-    const user = db.prepare('SELECT id, email, firstName, lastName, username, preferredCurrency, companyName, companyEmail, companyPhone, companyAddress, bankAddress FROM users WHERE id = ?').get(decoded.id);
+    const resDb = await db.execute({
+      sql: 'SELECT id, email, firstName, lastName, username, preferredCurrency, companyName, companyEmail, companyPhone, companyAddress, bankAddress FROM users WHERE id = ?',
+      args: [decoded.id]
+    });
+    const user = resDb.rows[0];
     if (!user) return res.status(401).json({ error: 'User not found' });
-    res.json(user);
+
+    // ensure standard object without complex libsql wrappers
+    res.json(Object.assign({}, user));
   } catch (error) {
     res.status(401).json({ error: 'Invalid token' });
   }
@@ -99,7 +110,7 @@ router.get('/google/url', (req, res) => {
     access_type: 'offline',
     prompt: 'consent'
   });
-  
+
   res.json({ url: `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}` });
 });
 
@@ -107,7 +118,7 @@ router.get('/google/url', (req, res) => {
 router.get('/google/callback', async (req, res) => {
   const { code } = req.query;
   const redirectUri = `${process.env.APP_URL}/api/auth/google/callback`;
-  
+
   try {
     // Exchange code for tokens
     const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
@@ -121,37 +132,48 @@ router.get('/google/callback', async (req, res) => {
         redirect_uri: redirectUri,
       })
     });
-    
+
     const tokenData = await tokenResponse.json();
-    
+
     // Get user info
     const userResponse = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
       headers: { Authorization: `Bearer ${tokenData.access_token}` }
     });
-    
+
     const userData = await userResponse.json();
-    
+
     // Check if user exists
-    let user = db.prepare('SELECT * FROM users WHERE googleId = ? OR email = ?').get(userData.id, userData.email) as any;
-    
+    const resDb = await db.execute({
+      sql: 'SELECT * FROM users WHERE googleId = ? OR email = ?',
+      args: [userData.id, userData.email]
+    });
+    let user = resDb.rows[0] as any;
+
     if (!user) {
       // Create new user
       const id = uuidv4();
       const username = userData.email.split('@')[0] + Math.floor(Math.random() * 1000);
-      db.prepare(`
-        INSERT INTO users (id, email, googleId, firstName, lastName, username)
-        VALUES (?, ?, ?, ?, ?, ?)
-      `).run(id, userData.email, userData.id, userData.given_name, userData.family_name, username);
-      
+
+      await db.execute({
+        sql: `
+          INSERT INTO users (id, email, googleId, firstName, lastName, username)
+          VALUES (?, ?, ?, ?, ?, ?)
+        `,
+        args: [id, userData.email, userData.id, userData.given_name, userData.family_name, username]
+      });
+
       user = { id, email: userData.email, firstName: userData.given_name, lastName: userData.family_name, username };
     } else if (!user.googleId) {
       // Link google account to existing email
-      db.prepare('UPDATE users SET googleId = ? WHERE id = ?').run(userData.id, user.id);
+      await db.execute({
+        sql: 'UPDATE users SET googleId = ? WHERE id = ?',
+        args: [userData.id, user.id as string]
+      });
     }
-    
+
     const token = jwt.sign({ id: user.id }, JWT_SECRET, { expiresIn: '7d' });
     res.cookie('token', token, { httpOnly: true, secure: true, sameSite: 'none' });
-    
+
     // Send success message to parent window
     res.send(`
       <html>

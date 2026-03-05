@@ -35,7 +35,7 @@ export default function BlockRenderer({ block }: BlockRendererProps) {
             </div>
           </div>
           <div className="text-right">
-            <h2 className="text-4xl font-light text-gray-300 tracking-widest uppercase mb-4">{data.documentTitle || 'Factura'}</h2>
+            <h2 className="text-4xl font-light text-gray-300 tracking-widest uppercase mb-4">{data.documentTitle || 'Invoice'}</h2>
             <div className="space-y-1">
               <p className="text-sm font-medium text-gray-900">
                 <span className="text-gray-500 font-normal mr-2">Nº:</span>

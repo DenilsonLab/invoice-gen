@@ -75,7 +75,7 @@ export default function InvoiceForm({ data, onChange }: InvoiceFormProps) {
           <div className="grid grid-cols-1 gap-4">
             <div className="space-y-1">
               <label className="text-xs font-medium text-gray-500">Título del Documento</label>
-              <input type="text" name="documentTitle" value={data.documentTitle || 'Factura'} onChange={handleChange} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all text-sm" />
+              <input type="text" name="documentTitle" value={data.documentTitle || 'Invoice'} onChange={handleChange} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all text-sm" />
             </div>
             <div className="space-y-1">
               <label className="text-xs font-medium text-gray-500">Nombre de la Empresa</label>

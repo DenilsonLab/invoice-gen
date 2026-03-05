@@ -1,12 +1,12 @@
 import { InvoiceData, InvoiceBlock, InvoiceSettings } from './types';
 
 export const initialInvoiceData: InvoiceData = {
-  documentTitle: 'Factura',
+  documentTitle: 'Invoice',
   companyName: 'Mi Empresa S.A.',
   companyAddress: 'Calle Principal 123\nCiudad, País 12345',
   companyEmail: 'contacto@miempresa.com',
   companyPhone: '+1 234 567 890',
-  
+
   clientName: 'Cliente Ejemplo',
   clientAddress: 'Avenida Secundaria 456\nOtra Ciudad, País 67890',
   clientEmail: 'cliente@ejemplo.com',
