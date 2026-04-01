@@ -32,19 +32,19 @@ export function BuilderProvider({ children }: { children: React.ReactNode }) {
         try {
           const res = await fetch('/api/invoices');
           let nextInvoiceNumber = 'INV-0001';
-          
+
           if (res.ok) {
             const invoices = await res.json();
             if (invoices.length > 0) {
               // Find the latest invoice number
               const latestInvoice = invoices[0]; // Assuming they are sorted by updatedAt DESC
               const lastNumber = latestInvoice.data.invoiceNumber;
-              
+
               if (lastNumber) {
                 // Extract prefix and number
                 const match = lastNumber.match(/^(.*?)(\d+)$/);
                 if (match) {
-                  const prefix = match[1];
+                  const prefix = match[1] || 'INV-';
                   const numStr = match[2];
                   const nextNum = parseInt(numStr, 10) + 1;
                   nextInvoiceNumber = `${prefix}${nextNum.toString().padStart(numStr.length, '0')}`;
@@ -57,11 +57,11 @@ export function BuilderProvider({ children }: { children: React.ReactNode }) {
 
           setData(prev => ({
             ...prev,
-            companyName: user.companyName || prev.companyName,
-            companyEmail: user.companyEmail || prev.companyEmail,
-            companyPhone: user.companyPhone || prev.companyPhone,
-            companyAddress: user.companyAddress || prev.companyAddress,
-            bankAddress: user.bankAddress || prev.bankAddress,
+            companyName: user.companyName || '',
+            companyEmail: user.companyEmail || '',
+            companyPhone: user.companyPhone || '',
+            companyAddress: user.companyAddress || '',
+            bankAddress: user.bankAddress || '',
             invoiceNumber: nextInvoiceNumber,
             issueDate: new Date().toISOString().split('T')[0],
             dueDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
@@ -70,7 +70,7 @@ export function BuilderProvider({ children }: { children: React.ReactNode }) {
           console.error('Failed to fetch initial data', error);
         }
       };
-      
+
       fetchInitialData();
     }
   }, [id, user]);

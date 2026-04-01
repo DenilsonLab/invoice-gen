@@ -4,8 +4,10 @@ import { useBuilder } from '../../context/BuilderContext';
 import { generateDocx } from '../../utils/docxExport';
 import { generatePdf } from '../../utils/pdfExport';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 
 export default function HeaderActions() {
+  const { t } = useTranslation();
   const { data, layout, settings, setData, setLayout, setSettings } = useBuilder();
   const { id } = useParams();
   const navigate = useNavigate();
@@ -23,7 +25,7 @@ export default function HeaderActions() {
             setLayout(invoice.layout);
             setSettings(invoice.settings);
           } else {
-            alert('Error al cargar la factura.');
+            alert(t('builder.actions.loadError'));
             navigate('/dashboard');
           }
         } catch (error) {
@@ -64,13 +66,13 @@ export default function HeaderActions() {
         if (!id) {
           navigate(`/builder/${savedInvoice.id}`, { replace: true });
         }
-        alert('Factura guardada exitosamente.');
+        alert(t('builder.actions.saveSuccess'));
       } else {
-        alert('Error al guardar la factura.');
+        alert(t('builder.actions.saveError'));
       }
     } catch (error) {
       console.error('Failed to save invoice', error);
-      alert('Error al guardar la factura.');
+      alert(t('builder.actions.saveError'));
     } finally {
       setIsSaving(false);
     }
@@ -103,10 +105,10 @@ export default function HeaderActions() {
         onClick={handleSave}
         disabled={isSaving}
         className="flex items-center gap-2 px-3 py-2 bg-white border border-gray-200 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors shadow-sm disabled:opacity-50"
-        title="Guardar proyecto"
+        title={t('common.save')}
       >
         <Save size={16} />
-        <span className="hidden sm:inline">{isSaving ? 'Guardando...' : 'Guardar'}</span>
+        <span className="hidden sm:inline">{isSaving ? t('common.saving') : t('common.save')}</span>
       </button>
 
       <div className="w-px h-6 bg-gray-200 mx-1"></div>
@@ -114,29 +116,29 @@ export default function HeaderActions() {
       <button 
         onClick={handleExportDocx}
         className="flex items-center gap-2 px-3 py-2 bg-blue-50 text-blue-700 border border-blue-200 text-sm font-medium rounded-lg hover:bg-blue-100 transition-colors shadow-sm"
-        title="Descargar Word"
+        title={t('builder.actions.word')}
       >
         <FileText size={16} />
-        <span className="hidden sm:inline">Word</span>
+        <span className="hidden sm:inline">{t('builder.actions.word')}</span>
       </button>
 
       <button 
         onClick={handleExportPdf}
         disabled={isExportingPdf}
         className="flex items-center gap-2 px-3 py-2 bg-red-50 text-red-700 border border-red-200 text-sm font-medium rounded-lg hover:bg-red-100 transition-colors shadow-sm disabled:opacity-50"
-        title="Descargar PDF"
+        title={t('builder.actions.pdf')}
       >
         <Download size={16} />
-        <span className="hidden sm:inline">{isExportingPdf ? 'Generando...' : 'PDF'}</span>
+        <span className="hidden sm:inline">{isExportingPdf ? t('builder.actions.generating') : t('builder.actions.pdf')}</span>
       </button>
 
       <button 
         onClick={handlePrint}
         className="flex items-center gap-2 px-4 py-2 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-gray-800 transition-colors shadow-sm"
-        title="Imprimir"
+        title={t('builder.actions.print')}
       >
         <Printer size={16} />
-        <span className="hidden sm:inline">Imprimir</span>
+        <span className="hidden sm:inline">{t('builder.actions.print')}</span>
       </button>
     </div>
   );

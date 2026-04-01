@@ -2,8 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { FileText, LogIn } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import LanguageSwitcher from '../components/LanguageSwitcher';
 
 export default function Login() {
+  const { t } = useTranslation();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -63,7 +66,8 @@ export default function Login() {
   }, [navigate, setUser]);
 
   return (
-    <div className="min-h-screen bg-[#f5f5f4] flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-[#f5f5f4] flex flex-col justify-center py-12 sm:px-6 lg:px-8 relative">
+      <div className="absolute top-4 right-4"><LanguageSwitcher /></div>
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
         <div className="flex justify-center">
           <div className="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center text-white shadow-lg">
@@ -71,7 +75,7 @@ export default function Login() {
           </div>
         </div>
         <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-          Inicia sesión en tu cuenta
+          {t('auth.loginTitle')}
         </h2>
       </div>
 
@@ -80,7 +84,7 @@ export default function Login() {
           <form className="space-y-6" onSubmit={handleSubmit}>
             {error && <div className="text-red-500 text-sm text-center bg-red-50 p-2 rounded">{error}</div>}
             <div>
-              <label className="block text-sm font-medium text-gray-700">Email</label>
+              <label className="block text-sm font-medium text-gray-700">{t('auth.email')}</label>
               <div className="mt-1">
                 <input
                   type="email"
@@ -93,7 +97,7 @@ export default function Login() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700">Contraseña</label>
+              <label className="block text-sm font-medium text-gray-700">{t('auth.password')}</label>
               <div className="mt-1">
                 <input
                   type="password"
@@ -110,7 +114,7 @@ export default function Login() {
                 type="submit"
                 className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
               >
-                Iniciar sesión
+                {t('auth.loginBtn')}
               </button>
             </div>
           </form>
@@ -121,7 +125,7 @@ export default function Login() {
                 <div className="w-full border-t border-gray-300" />
               </div>
               <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-white text-gray-500">O continuar con</span>
+                <span className="px-2 bg-white text-gray-500">{t('auth.orContinueWith')}</span>
               </div>
             </div>
 
@@ -139,9 +143,9 @@ export default function Login() {
           </div>
           
           <div className="mt-6 text-center text-sm">
-            <span className="text-gray-600">¿No tienes cuenta? </span>
+            <span className="text-gray-600">{t('auth.noAccount')} </span>
             <Link to="/register" className="font-medium text-blue-600 hover:text-blue-500">
-              Regístrate
+              {t('auth.signup')}
             </Link>
           </div>
         </div>

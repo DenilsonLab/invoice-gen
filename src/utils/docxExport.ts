@@ -2,8 +2,10 @@ import { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, Width
 import { saveAs } from 'file-saver';
 import { InvoiceData, InvoiceBlock, InvoiceSettings } from '../types';
 import { formatCurrency, formatDate } from './formatters';
+import i18n from '../i18n';
 
 export const generateDocx = async (data: InvoiceData, layout: InvoiceBlock[], settings: InvoiceSettings) => {
+  const t = i18n.t;
   const children: any[] = [];
 
   // Elimina etiquetas HTML del contenido generado por Quill para texto plano
@@ -45,7 +47,7 @@ export const generateDocx = async (data: InvoiceData, layout: InvoiceBlock[], se
                     borders: noBorders,
                     children: [
                       new Paragraph({
-                        children: [new TextRun({ text: data.companyName || 'Nombre de Empresa', bold: true, size: 36, color: settings.brandColor.replace('#', '') })],
+                        children: [new TextRun({ text: data.companyName || t('invoice.companyNamePlaceholder'), bold: true, size: 36, color: settings.brandColor.replace('#', '') })],
                       }),
                       new Paragraph({ text: data.companyAddress || '', spacing: { before: 100 } }),
                       new Paragraph({ text: data.companyEmail || '' }),
@@ -58,27 +60,27 @@ export const generateDocx = async (data: InvoiceData, layout: InvoiceBlock[], se
                     children: [
                       new Paragraph({
                         alignment: AlignmentType.RIGHT,
-                        children: [new TextRun({ text: (data.documentTitle || 'FACTURA').toUpperCase(), bold: true, size: 48, color: "CCCCCC" })],
+                        children: [new TextRun({ text: (data.documentTitle || t('invoice.defaultTitle')).toUpperCase(), bold: true, size: 48, color: "CCCCCC" })],
                       }),
                       new Paragraph({
                         alignment: AlignmentType.RIGHT,
                         spacing: { before: 200 },
                         children: [
-                          new TextRun({ text: "Nº: ", color: "666666" }),
+                          new TextRun({ text: `${t('invoice.numberAbbr')} `, color: "666666" }),
                           new TextRun({ text: data.invoiceNumber, bold: true }),
                         ],
                       }),
                       new Paragraph({
                         alignment: AlignmentType.RIGHT,
                         children: [
-                          new TextRun({ text: "Fecha: ", color: "666666" }),
+                          new TextRun({ text: `${t('invoice.dateAbbr')} `, color: "666666" }),
                           new TextRun({ text: formatDate(data.issueDate), bold: true }),
                         ],
                       }),
                       new Paragraph({
                         alignment: AlignmentType.RIGHT,
                         children: [
-                          new TextRun({ text: "Vence: ", color: "666666" }),
+                          new TextRun({ text: `${t('invoice.dueAbbr')} `, color: "666666" }),
                           new TextRun({ text: formatDate(data.dueDate), bold: true }),
                         ],
                       }),
@@ -94,7 +96,7 @@ export const generateDocx = async (data: InvoiceData, layout: InvoiceBlock[], se
       case 'company-info':
         children.push(
           new Paragraph({
-            children: [new TextRun({ text: data.companyName || 'Nombre de Empresa', bold: true, size: 32, color: settings.brandColor.replace('#', '') })],
+            children: [new TextRun({ text: data.companyName || t('invoice.companyNamePlaceholder'), bold: true, size: 32, color: settings.brandColor.replace('#', '') })],
           }),
           new Paragraph({ text: data.companyAddress || '', spacing: { before: 100 } }),
           new Paragraph({ text: data.companyEmail || '' }),
@@ -105,11 +107,11 @@ export const generateDocx = async (data: InvoiceData, layout: InvoiceBlock[], se
       case 'client-info':
         children.push(
           new Paragraph({
-            children: [new TextRun({ text: "FACTURAR A:", bold: true, size: 20, color: "888888" })],
+            children: [new TextRun({ text: t('invoice.billTo').toUpperCase(), bold: true, size: 20, color: "888888" })],
             spacing: { before: 200, after: 100 }
           }),
           new Paragraph({
-            children: [new TextRun({ text: data.clientName || 'Nombre del Cliente', bold: true, size: 24 })],
+            children: [new TextRun({ text: data.clientName || t('invoice.clientNamePlaceholder'), bold: true, size: 24 })],
           }),
           new Paragraph({ text: data.clientAddress || '', spacing: { before: 100 } }),
           new Paragraph({ text: data.clientEmail || '' }),
@@ -128,21 +130,21 @@ export const generateDocx = async (data: InvoiceData, layout: InvoiceBlock[], se
                   new TableCell({
                     borders: noBorders,
                     children: [
-                      new Paragraph({ children: [new TextRun({ text: "Nº FACTURA", bold: true, size: 20, color: "888888" })] }),
+                      new Paragraph({ children: [new TextRun({ text: t('form.invoiceNumber').toUpperCase(), bold: true, size: 20, color: "888888" })] }),
                       new Paragraph({ children: [new TextRun({ text: data.invoiceNumber, bold: true })], spacing: { before: 50 } }),
                     ]
                   }),
                   new TableCell({
                     borders: noBorders,
                     children: [
-                      new Paragraph({ children: [new TextRun({ text: "FECHA DE EMISIÓN", bold: true, size: 20, color: "888888" })] }),
+                      new Paragraph({ children: [new TextRun({ text: t('form.issueDate').toUpperCase(), bold: true, size: 20, color: "888888" })] }),
                       new Paragraph({ children: [new TextRun({ text: formatDate(data.issueDate), bold: true })], spacing: { before: 50 } }),
                     ]
                   }),
                   new TableCell({
                     borders: noBorders,
                     children: [
-                      new Paragraph({ children: [new TextRun({ text: "FECHA DE VENCIMIENTO", bold: true, size: 20, color: "888888" })] }),
+                      new Paragraph({ children: [new TextRun({ text: t('form.dueDate').toUpperCase(), bold: true, size: 20, color: "888888" })] }),
                       new Paragraph({ children: [new TextRun({ text: formatDate(data.dueDate), bold: true })], spacing: { before: 50 } }),
                     ]
                   }),
@@ -157,10 +159,10 @@ export const generateDocx = async (data: InvoiceData, layout: InvoiceBlock[], se
         const tableRows = [
           new TableRow({
             children: [
-              new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Descripción", bold: true })] })], shading: { fill: "F3F4F6" }, margins: { top: 100, bottom: 100, left: 100, right: 100 } }),
-              new TableCell({ children: [new Paragraph({ alignment: AlignmentType.RIGHT, children: [new TextRun({ text: "Cant.", bold: true })] })], shading: { fill: "F3F4F6" }, margins: { top: 100, bottom: 100, left: 100, right: 100 } }),
-              new TableCell({ children: [new Paragraph({ alignment: AlignmentType.RIGHT, children: [new TextRun({ text: "Precio", bold: true })] })], shading: { fill: "F3F4F6" }, margins: { top: 100, bottom: 100, left: 100, right: 100 } }),
-              new TableCell({ children: [new Paragraph({ alignment: AlignmentType.RIGHT, children: [new TextRun({ text: "Total", bold: true })] })], shading: { fill: "F3F4F6" }, margins: { top: 100, bottom: 100, left: 100, right: 100 } }),
+              new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: t('form.description'), bold: true })] })], shading: { fill: "F3F4F6" }, margins: { top: 100, bottom: 100, left: 100, right: 100 } }),
+              new TableCell({ children: [new Paragraph({ alignment: AlignmentType.RIGHT, children: [new TextRun({ text: t('invoice.qtyAbbr'), bold: true })] })], shading: { fill: "F3F4F6" }, margins: { top: 100, bottom: 100, left: 100, right: 100 } }),
+              new TableCell({ children: [new Paragraph({ alignment: AlignmentType.RIGHT, children: [new TextRun({ text: t('form.price'), bold: true })] })], shading: { fill: "F3F4F6" }, margins: { top: 100, bottom: 100, left: 100, right: 100 } }),
+              new TableCell({ children: [new Paragraph({ alignment: AlignmentType.RIGHT, children: [new TextRun({ text: t('invoice.total'), bold: true })] })], shading: { fill: "F3F4F6" }, margins: { top: 100, bottom: 100, left: 100, right: 100 } }),
             ],
           })
         ];
@@ -172,7 +174,7 @@ export const generateDocx = async (data: InvoiceData, layout: InvoiceBlock[], se
                 new TableCell({ children: [new Paragraph({ text: item.description || '-' })], margins: { top: 100, bottom: 100, left: 100, right: 100 } }),
                 new TableCell({ children: [new Paragraph({ alignment: AlignmentType.RIGHT, text: item.quantity.toString() })], margins: { top: 100, bottom: 100, left: 100, right: 100 } }),
                 new TableCell({ children: [new Paragraph({ alignment: AlignmentType.RIGHT, text: formatCurrency(item.price, data.currency) })], margins: { top: 100, bottom: 100, left: 100, right: 100 } }),
-                new TableCell({ children: [new Paragraph({ alignment: AlignmentType.RIGHT, children: [new TextRun({ text: formatCurrency(item.quantity * item.price, data.currency), bold: true })] })], margins: { top: 100, bottom: 100, left: 100, right: 100 } }),
+                new TableCell({ children: [new Paragraph({ alignment: AlignmentType.RIGHT, children: [new TextRun({ text: formatCurrency((Number(item.quantity) || 0) * (Number(item.price) || 0), data.currency), bold: true })] })], margins: { top: 100, bottom: 100, left: 100, right: 100 } }),
               ]
             })
           );
@@ -187,14 +189,14 @@ export const generateDocx = async (data: InvoiceData, layout: InvoiceBlock[], se
         break;
 
       case 'totals':
-        const subtotal = data.items.reduce((sum, item) => sum + (item.quantity * item.price), 0);
-        const taxAmount = subtotal * (data.taxRate / 100);
-        const total = subtotal + taxAmount - data.discount;
+        const subtotal = (data.items || []).reduce((sum, item) => sum + ((Number(item.quantity) || 0) * (Number(item.price) || 0)), 0);
+        const taxAmount = subtotal * ((Number(data.taxRate) || 0) / 100);
+        const total = subtotal + taxAmount - (Number(data.discount) || 0);
 
         const totalsRows = [
           new TableRow({
             children: [
-              new TableCell({ borders: noBorders, children: [new Paragraph({ alignment: AlignmentType.RIGHT, text: "Subtotal" })] }),
+              new TableCell({ borders: noBorders, children: [new Paragraph({ alignment: AlignmentType.RIGHT, text: t('invoice.subtotal') })] }),
               new TableCell({ borders: noBorders, children: [new Paragraph({ alignment: AlignmentType.RIGHT, text: formatCurrency(subtotal, data.currency) })] }),
             ]
           })
@@ -204,7 +206,7 @@ export const generateDocx = async (data: InvoiceData, layout: InvoiceBlock[], se
           totalsRows.push(
             new TableRow({
               children: [
-                new TableCell({ borders: noBorders, children: [new Paragraph({ alignment: AlignmentType.RIGHT, text: `Impuesto (${data.taxRate}%)` })] }),
+                new TableCell({ borders: noBorders, children: [new Paragraph({ alignment: AlignmentType.RIGHT, text: `${t('invoice.tax')} (${data.taxRate}%)` })] }),
                 new TableCell({ borders: noBorders, children: [new Paragraph({ alignment: AlignmentType.RIGHT, text: formatCurrency(taxAmount, data.currency) })] }),
               ]
             })
@@ -215,7 +217,7 @@ export const generateDocx = async (data: InvoiceData, layout: InvoiceBlock[], se
           totalsRows.push(
             new TableRow({
               children: [
-                new TableCell({ borders: noBorders, children: [new Paragraph({ alignment: AlignmentType.RIGHT, text: "Descuento" })] }),
+                new TableCell({ borders: noBorders, children: [new Paragraph({ alignment: AlignmentType.RIGHT, text: t('form.discount') })] }),
                 new TableCell({ borders: noBorders, children: [new Paragraph({ alignment: AlignmentType.RIGHT, children: [new TextRun({ text: `-${formatCurrency(data.discount, data.currency)}`, color: "FF0000" })] })] }),
               ]
             })
@@ -225,7 +227,7 @@ export const generateDocx = async (data: InvoiceData, layout: InvoiceBlock[], se
         totalsRows.push(
           new TableRow({
             children: [
-              new TableCell({ borders: noBorders, children: [new Paragraph({ alignment: AlignmentType.RIGHT, children: [new TextRun({ text: "Total", bold: true, size: 28 })] })], margins: { top: 200 } }),
+              new TableCell({ borders: noBorders, children: [new Paragraph({ alignment: AlignmentType.RIGHT, children: [new TextRun({ text: t('invoice.total'), bold: true, size: 28 })] })], margins: { top: 200 } }),
               new TableCell({ borders: noBorders, children: [new Paragraph({ alignment: AlignmentType.RIGHT, children: [new TextRun({ text: formatCurrency(total, data.currency), bold: true, size: 28 })] })], margins: { top: 200 } }),
             ]
           })
@@ -245,7 +247,7 @@ export const generateDocx = async (data: InvoiceData, layout: InvoiceBlock[], se
         const notesText = stripHtml(data.notes);
         if (notesText) {
           children.push(
-            new Paragraph({ children: [new TextRun({ text: "Notas", bold: true })], spacing: { before: 200, after: 100 } }),
+            new Paragraph({ children: [new TextRun({ text: t('form.additionalNotes'), bold: true })], spacing: { before: 200, after: 100 } }),
             new Paragraph({ text: notesText })
           );
         }
@@ -256,8 +258,19 @@ export const generateDocx = async (data: InvoiceData, layout: InvoiceBlock[], se
         const termsText = stripHtml(data.terms);
         if (termsText) {
           children.push(
-            new Paragraph({ children: [new TextRun({ text: "Términos y Condiciones", bold: true })], spacing: { before: 200, after: 100 } }),
+            new Paragraph({ children: [new TextRun({ text: t('form.terms'), bold: true })], spacing: { before: 200, after: 100 } }),
             new Paragraph({ text: termsText })
+          );
+        }
+        break;
+      }
+
+      case 'bank-details': {
+        const bankText = stripHtml(data.bankAddress || '');
+        if (bankText) {
+          children.push(
+            new Paragraph({ children: [new TextRun({ text: t('form.bankDetails'), bold: true })], spacing: { before: 200, after: 100 } }),
+            new Paragraph({ text: bankText })
           );
         }
         break;
@@ -285,9 +298,9 @@ export const generateDocx = async (data: InvoiceData, layout: InvoiceBlock[], se
       case 'logo':
         // Note: docx image embedding requires arraybuffer or base64. 
         // For simplicity, we just put a placeholder text if there's a logo, 
-        // as parsing base64 to buffer in browser for docx is complex.
+        // as parsing base64 to buffer for docx is complex.
         if (settings.logoUrl) {
-          children.push(new Paragraph({ text: "[Logo de la Empresa]", alignment: AlignmentType.CENTER, spacing: { before: 200, after: 200 } }));
+          children.push(new Paragraph({ text: `[${i18n.t('invoice.logoPlaceholder')}]`, alignment: AlignmentType.CENTER, spacing: { before: 200, after: 200 } }));
         }
         break;
     }
@@ -301,5 +314,6 @@ export const generateDocx = async (data: InvoiceData, layout: InvoiceBlock[], se
   });
 
   const blob = await Packer.toBlob(doc);
-  saveAs(blob, `${data.invoiceNumber || 'Factura'}.docx`);
+  const docTitle = data.documentTitle || t('invoice.defaultTitle');
+  saveAs(blob, `${docTitle}_${data.invoiceNumber || 'Borrador'}.docx`);
 };

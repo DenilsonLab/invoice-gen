@@ -4,15 +4,16 @@ import { InvoiceData } from '../types';
 
 export const generatePdf = async (data: InvoiceData) => {
   const element = document.getElementById('invoice-canvas');
-  
+
   if (!element) {
     throw new Error('No se encontró el elemento de la factura para exportar.');
   }
 
   // Configuración del nombre del archivo
+  const docTitle = data.documentTitle || 'Factura';
   const invoiceNumber = data.invoiceNumber || 'Borrador';
   const clientName = data.clientName ? `_${data.clientName.replace(/\s+/g, '-')}` : '';
-  const filename = `Factura_${invoiceNumber}${clientName}.pdf`;
+  const filename = `${docTitle}_${invoiceNumber}${clientName}.pdf`;
 
   try {
     // Generar imagen PNG del elemento
@@ -44,7 +45,7 @@ export const generatePdf = async (data: InvoiceData) => {
 
     // Calcular el ratio para mantener la proporción
     const ratio = Math.min(pdfWidth / elementWidth, pdfHeight / elementHeight);
-    
+
     // Dimensiones finales en el PDF
     const imgWidth = elementWidth * ratio;
     const imgHeight = elementHeight * ratio;

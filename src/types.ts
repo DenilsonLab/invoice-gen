@@ -11,7 +11,7 @@ export interface InvoiceData {
   companyAddress: string;
   companyEmail: string;
   companyPhone: string;
-  
+
   clientName: string;
   clientAddress: string;
   clientEmail: string;
@@ -29,9 +29,10 @@ export interface InvoiceData {
 
   notes: string;
   terms: string;
+  bankAddress?: string;
 }
 
-export type BlockType = 
+export type BlockType =
   | 'logo'
   | 'company-info'
   | 'client-info'
@@ -40,6 +41,7 @@ export type BlockType =
   | 'totals'
   | 'notes'
   | 'terms'
+  | 'bank-details'
   | 'divider'
   | 'spacer'
   | 'custom-text'

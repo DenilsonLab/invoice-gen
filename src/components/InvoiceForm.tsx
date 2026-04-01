@@ -2,6 +2,7 @@ import React from 'react';
 import { InvoiceData, InvoiceItem } from '../types';
 import { Plus, Trash2 } from 'lucide-react';
 import { useBuilder } from '../context/BuilderContext';
+import { useTranslation } from 'react-i18next';
 import ReactQuill from 'react-quill-new';
 import 'react-quill-new/dist/quill.snow.css';
 
@@ -11,6 +12,7 @@ interface InvoiceFormProps {
 }
 
 export default function InvoiceForm({ data, onChange }: InvoiceFormProps) {
+  const { t } = useTranslation();
   const { layout } = useBuilder();
 
   const hasBlock = (types: string[]) => layout.some(b => types.includes(b.type));
@@ -22,6 +24,7 @@ export default function InvoiceForm({ data, onChange }: InvoiceFormProps) {
   const showTotals = hasBlock(['totals']);
   const showNotes = hasBlock(['notes']);
   const showTerms = hasBlock(['terms']);
+  const showBankDetails = hasBlock(['bank-details']);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -61,7 +64,9 @@ export default function InvoiceForm({ data, onChange }: InvoiceFormProps) {
   const quillModules = {
     toolbar: [
       ['bold', 'italic', 'underline', 'code'],
-      ['code-block']
+      ['code-block'],
+      [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+      ['clean']
     ],
   };
 
@@ -71,26 +76,26 @@ export default function InvoiceForm({ data, onChange }: InvoiceFormProps) {
       {/* Company Details */}
       {showCompany && (
         <section>
-          <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wider mb-4">Detalles de tu Empresa</h3>
+          <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wider mb-4">{t('form.companyTitle')}</h3>
           <div className="grid grid-cols-1 gap-4">
             <div className="space-y-1">
-              <label className="text-xs font-medium text-gray-500">Título del Documento</label>
-              <input type="text" name="documentTitle" value={data.documentTitle || 'Invoice'} onChange={handleChange} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all text-sm" />
+              <label className="text-xs font-medium text-gray-500">{t('form.invoiceLabel')}</label>
+              <input type="text" name="documentTitle" value={data.documentTitle || t('invoice.defaultTitle')} onChange={handleChange} placeholder={t('invoice.defaultTitle')} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all text-sm uppercase" />
             </div>
             <div className="space-y-1">
-              <label className="text-xs font-medium text-gray-500">Nombre de la Empresa</label>
+              <label className="text-xs font-medium text-gray-500">{t('form.companyName')}</label>
               <input type="text" name="companyName" value={data.companyName} onChange={handleChange} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all text-sm" />
             </div>
             <div className="space-y-1">
-              <label className="text-xs font-medium text-gray-500">Email</label>
+              <label className="text-xs font-medium text-gray-500">{t('form.email')}</label>
               <input type="email" name="companyEmail" value={data.companyEmail} onChange={handleChange} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all text-sm" />
             </div>
             <div className="space-y-1">
-              <label className="text-xs font-medium text-gray-500">Teléfono</label>
+              <label className="text-xs font-medium text-gray-500">{t('form.phone')}</label>
               <input type="tel" name="companyPhone" value={data.companyPhone} onChange={handleChange} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all text-sm" />
             </div>
             <div className="space-y-1">
-              <label className="text-xs font-medium text-gray-500">Dirección</label>
+              <label className="text-xs font-medium text-gray-500">{t('form.address')}</label>
               <textarea name="companyAddress" value={data.companyAddress} onChange={handleChange} rows={2} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all text-sm resize-none" />
             </div>
           </div>
@@ -102,22 +107,22 @@ export default function InvoiceForm({ data, onChange }: InvoiceFormProps) {
       {/* Client Details */}
       {showClient && (
         <section>
-          <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wider mb-4">Detalles del Cliente</h3>
+          <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wider mb-4">{t('form.clientTitle')}</h3>
           <div className="grid grid-cols-1 gap-4">
             <div className="space-y-1">
-              <label className="text-xs font-medium text-gray-500">Nombre del Cliente</label>
+              <label className="text-xs font-medium text-gray-500">{t('form.clientName')}</label>
               <input type="text" name="clientName" value={data.clientName} onChange={handleChange} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all text-sm" />
             </div>
             <div className="space-y-1">
-              <label className="text-xs font-medium text-gray-500">Email del Cliente</label>
+              <label className="text-xs font-medium text-gray-500">{t('form.clientEmail')}</label>
               <input type="email" name="clientEmail" value={data.clientEmail} onChange={handleChange} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all text-sm" />
             </div>
             <div className="space-y-1">
-              <label className="text-xs font-medium text-gray-500">Teléfono del Cliente</label>
+              <label className="text-xs font-medium text-gray-500">{t('form.clientPhone')}</label>
               <input type="tel" name="clientPhone" value={data.clientPhone || ''} onChange={handleChange} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all text-sm" />
             </div>
             <div className="space-y-1">
-              <label className="text-xs font-medium text-gray-500">Dirección del Cliente</label>
+              <label className="text-xs font-medium text-gray-500">{t('form.clientAddress')}</label>
               <textarea name="clientAddress" value={data.clientAddress} onChange={handleChange} rows={2} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all text-sm resize-none" />
             </div>
           </div>
@@ -129,18 +134,18 @@ export default function InvoiceForm({ data, onChange }: InvoiceFormProps) {
       {/* Invoice Details */}
       {showDetails && (
         <section>
-          <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wider mb-4">Detalles de la Factura</h3>
+          <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wider mb-4">{t('form.invoiceTitle')}</h3>
           <div className="grid grid-cols-1 gap-4">
             <div className="space-y-1">
-              <label className="text-xs font-medium text-gray-500">Número de Factura</label>
+              <label className="text-xs font-medium text-gray-500">{t('form.invoiceNumber')}</label>
               <input type="text" name="invoiceNumber" value={data.invoiceNumber} onChange={handleChange} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all text-sm font-mono" />
             </div>
             <div className="space-y-1">
-              <label className="text-xs font-medium text-gray-500">Fecha de Emisión</label>
+              <label className="text-xs font-medium text-gray-500">{t('form.issueDate')}</label>
               <input type="date" name="issueDate" value={data.issueDate} onChange={handleChange} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all text-sm" />
             </div>
             <div className="space-y-1">
-              <label className="text-xs font-medium text-gray-500">Fecha de Vencimiento</label>
+              <label className="text-xs font-medium text-gray-500">{t('form.dueDate')}</label>
               <input type="date" name="dueDate" value={data.dueDate} onChange={handleChange} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all text-sm" />
             </div>
           </div>
@@ -153,7 +158,7 @@ export default function InvoiceForm({ data, onChange }: InvoiceFormProps) {
       {showItems && (
         <section>
           <div className="flex justify-between items-center mb-4">
-            <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wider">Artículos</h3>
+            <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wider">{t('form.itemsTitle')}</h3>
           </div>
 
           <div className="space-y-4">
@@ -170,34 +175,34 @@ export default function InvoiceForm({ data, onChange }: InvoiceFormProps) {
                 </div>
 
                 <div className="pr-8">
-                  <label className="text-[10px] font-medium text-gray-500 uppercase tracking-wider mb-1 block">Descripción</label>
+                  <label className="text-[10px] font-medium text-gray-500 uppercase tracking-wider mb-1 block">{t('form.description')}</label>
                   <input
                     type="text"
                     value={item.description}
                     onChange={(e) => handleItemChange(item.id, 'description', e.target.value)}
-                    placeholder="Descripción del artículo"
+                    placeholder={t('form.description')}
                     className="w-full px-3 py-2 bg-white border border-gray-200 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all text-sm"
                   />
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="text-[10px] font-medium text-gray-500 uppercase tracking-wider mb-1 block">Cantidad</label>
+                    <label className="text-[10px] font-medium text-gray-500 uppercase tracking-wider mb-1 block">{t('form.quantity')}</label>
                     <input
                       type="number"
                       value={item.quantity}
                       onChange={(e) => handleItemChange(item.id, 'quantity', parseFloat(e.target.value) || 0)}
-                      placeholder="Cant."
+                      placeholder={t('form.quantity')}
                       className="w-full px-3 py-2 bg-white border border-gray-200 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all text-sm"
                     />
                   </div>
                   <div>
-                    <label className="text-[10px] font-medium text-gray-500 uppercase tracking-wider mb-1 block">Precio</label>
+                    <label className="text-[10px] font-medium text-gray-500 uppercase tracking-wider mb-1 block">{t('form.price')}</label>
                     <input
                       type="number"
                       value={item.price}
                       onChange={(e) => handleItemChange(item.id, 'price', parseFloat(e.target.value) || 0)}
-                      placeholder="Precio"
+                      placeholder={t('form.price')}
                       className="w-full px-3 py-2 bg-white border border-gray-200 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all text-sm"
                     />
                   </div>
@@ -211,7 +216,7 @@ export default function InvoiceForm({ data, onChange }: InvoiceFormProps) {
             className="mt-4 flex items-center gap-2 text-sm font-medium text-blue-600 hover:text-blue-700 px-4 py-2 rounded-lg hover:bg-blue-50 transition-colors"
           >
             <Plus size={16} />
-            Agregar Artículo
+            {t('form.addItem')}
           </button>
         </section>
       )}
@@ -219,15 +224,15 @@ export default function InvoiceForm({ data, onChange }: InvoiceFormProps) {
       {showItems && (showTotals || showNotes || showTerms) && <hr className="border-gray-100" />}
 
       {/* Totals & Settings */}
-      {(showTotals || showNotes || showTerms) && (
+      {(showTotals || showNotes || showTerms || showBankDetails) && (
         <section>
           <div className="grid grid-cols-1 gap-8">
-            {(showNotes || showTerms) && (
+            {(showNotes || showTerms || showBankDetails) && (
               <div className="space-y-4">
-                <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wider">Notas y Términos</h3>
+                <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wider">{t('form.notesTermsTitle')}</h3>
                 {showNotes && (
                   <div className="space-y-1">
-                    <label className="text-xs font-medium text-gray-500">Notas Adicionales</label>
+                    <label className="text-xs font-medium text-gray-500">{t('form.additionalNotes')}</label>
                     <ReactQuill
                       theme="snow"
                       value={data.notes}
@@ -239,11 +244,23 @@ export default function InvoiceForm({ data, onChange }: InvoiceFormProps) {
                 )}
                 {showTerms && (
                   <div className="space-y-1">
-                    <label className="text-xs font-medium text-gray-500">Términos y Condiciones</label>
+                    <label className="text-xs font-medium text-gray-500">{t('form.terms')}</label>
                     <ReactQuill
                       theme="snow"
                       value={data.terms}
                       onChange={(value) => handleQuillChange('terms', value)}
+                      modules={quillModules}
+                      className="bg-white rounded-lg"
+                    />
+                  </div>
+                )}
+                {showBankDetails && (
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-gray-500">{t('form.bankDetails')}</label>
+                    <ReactQuill
+                      theme="snow"
+                      value={data.bankAddress || ''}
+                      onChange={(value) => handleQuillChange('bankAddress', value)}
                       modules={quillModules}
                       className="bg-white rounded-lg"
                     />
@@ -254,10 +271,10 @@ export default function InvoiceForm({ data, onChange }: InvoiceFormProps) {
 
             {showTotals && (
               <div className="space-y-4">
-                <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wider">Configuración de Totales</h3>
+                <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wider">{t('form.totalsTitle')}</h3>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1">
-                    <label className="text-xs font-medium text-gray-500">Moneda</label>
+                    <label className="text-xs font-medium text-gray-500">{t('form.currency')}</label>
                     <select name="currency" value={data.currency} onChange={handleChange as any} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all text-sm bg-white">
                       <option value="USD">USD ($)</option>
                       <option value="EUR">EUR (€)</option>
@@ -270,11 +287,11 @@ export default function InvoiceForm({ data, onChange }: InvoiceFormProps) {
                     </select>
                   </div>
                   <div className="space-y-1">
-                    <label className="text-xs font-medium text-gray-500">Impuesto (%)</label>
+                    <label className="text-xs font-medium text-gray-500">{t('form.taxRate')}</label>
                     <input type="number" name="taxRate" value={data.taxRate} onChange={handleNumberChange} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all text-sm" />
                   </div>
                   <div className="space-y-1">
-                    <label className="text-xs font-medium text-gray-500">Descuento</label>
+                    <label className="text-xs font-medium text-gray-500">{t('form.discount')}</label>
                     <input type="number" name="discount" value={data.discount} onChange={handleNumberChange} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all text-sm" />
                   </div>
                 </div>
@@ -284,9 +301,9 @@ export default function InvoiceForm({ data, onChange }: InvoiceFormProps) {
         </section>
       )}
 
-      {!showCompany && !showClient && !showDetails && !showItems && !showTotals && !showNotes && !showTerms && (
+      {!showCompany && !showClient && !showDetails && !showItems && !showTotals && !showNotes && !showTerms && !showBankDetails && (
         <div className="text-center p-6 bg-gray-50 rounded-lg border border-gray-200 text-gray-500 text-sm">
-          Agrega bloques al lienzo para habilitar los campos de datos.
+          {t('form.emptyCanvas')}
         </div>
       )}
 

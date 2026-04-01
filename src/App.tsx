@@ -10,6 +10,8 @@ import Dashboard from './pages/Dashboard';
 import Profile from './pages/Profile';
 import { FileText, ArrowLeft } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
+import LanguageSwitcher from './components/LanguageSwitcher';
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -18,6 +20,7 @@ function PrivateRoute({ children }: { children: React.ReactNode }) {
 }
 
 function BuilderLayout() {
+  const { t } = useTranslation();
   return (
     <BuilderProvider>
       <div className="min-h-screen bg-[#f5f5f4] text-gray-900 font-sans selection:bg-blue-200 flex flex-col">
@@ -34,7 +37,10 @@ function BuilderLayout() {
               <span className="font-semibold text-lg tracking-tight">InvoiceGen Pro</span>
             </div>
             
-            <HeaderActions />
+            <div className="flex items-center gap-4">
+              <LanguageSwitcher />
+              <HeaderActions />
+            </div>
           </div>
         </header>
 

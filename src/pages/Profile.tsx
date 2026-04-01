@@ -2,8 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { FileText, ArrowLeft, Save } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import LanguageSwitcher from '../components/LanguageSwitcher';
 
 export default function Profile() {
+  const { t } = useTranslation();
   const { user, setUser } = useAuth();
   const [firstName, setFirstName] = useState(user?.firstName || '');
   const [lastName, setLastName] = useState(user?.lastName || '');
@@ -68,8 +71,9 @@ export default function Profile() {
             <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white">
               <FileText size={20} />
             </div>
-            <span className="font-semibold text-lg tracking-tight">Mi Perfil</span>
+            <span className="font-semibold text-lg tracking-tight">{t('nav.profile')}</span>
           </div>
+          <LanguageSwitcher />
         </div>
       </header>
 
