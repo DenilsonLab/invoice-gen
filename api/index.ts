@@ -1,8 +1,8 @@
 import express from 'express';
 import cookieParser from 'cookie-parser';
-import authRoutes from '../src/server/routes/auth';
-import userRoutes from '../src/server/routes/users';
-import invoiceRoutes from '../src/server/routes/invoices';
+import authRoutes from '../src/server/routes/auth.js';
+import userRoutes from '../src/server/routes/users.js';
+import invoiceRoutes from '../src/server/routes/invoices.js';
 
 const app = express();
 
