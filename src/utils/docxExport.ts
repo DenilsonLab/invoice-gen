@@ -47,7 +47,7 @@ export const generateDocx = async (data: InvoiceData, layout: InvoiceBlock[], se
                     borders: noBorders,
                     children: [
                       new Paragraph({
-                        children: [new TextRun({ text: data.companyName || t('invoice.companyNamePlaceholder'), bold: true, size: 36, color: settings.brandColor.replace('#', '') })],
+                        children: [new TextRun({ text: data.companyName || t('invoice.defaultCompanyName'), bold: true, size: 36, color: settings.brandColor.replace('#', '') })],
                       }),
                       new Paragraph({ text: data.companyAddress || '', spacing: { before: 100 } }),
                       new Paragraph({ text: data.companyEmail || '' }),
@@ -96,7 +96,7 @@ export const generateDocx = async (data: InvoiceData, layout: InvoiceBlock[], se
       case 'company-info':
         children.push(
           new Paragraph({
-            children: [new TextRun({ text: data.companyName || t('invoice.companyNamePlaceholder'), bold: true, size: 32, color: settings.brandColor.replace('#', '') })],
+            children: [new TextRun({ text: data.companyName || t('invoice.defaultCompanyName'), bold: true, size: 32, color: settings.brandColor.replace('#', '') })],
           }),
           new Paragraph({ text: data.companyAddress || '', spacing: { before: 100 } }),
           new Paragraph({ text: data.companyEmail || '' }),
@@ -111,7 +111,7 @@ export const generateDocx = async (data: InvoiceData, layout: InvoiceBlock[], se
             spacing: { before: 200, after: 100 }
           }),
           new Paragraph({
-            children: [new TextRun({ text: data.clientName || t('invoice.clientNamePlaceholder'), bold: true, size: 24 })],
+            children: [new TextRun({ text: data.clientName || t('invoice.defaultClientName'), bold: true, size: 24 })],
           }),
           new Paragraph({ text: data.clientAddress || '', spacing: { before: 100 } }),
           new Paragraph({ text: data.clientEmail || '' }),

@@ -25,7 +25,7 @@ export default function BlockRenderer({ block }: BlockRendererProps) {
               <img src={settings.logoUrl} alt="Logo" className="max-h-20 mb-4 object-contain" />
             ) : (
               <h1 className="text-3xl font-bold text-gray-900 mb-2" style={{ color: settings.brandColor }}>
-                {data.companyName || t('invoice.companyNamePlaceholder')}
+                {data.companyName || t('invoice.defaultCompanyName')}
               </h1>
             )}
             <p className="text-sm text-gray-500 whitespace-pre-line leading-relaxed">
@@ -60,7 +60,7 @@ export default function BlockRenderer({ block }: BlockRendererProps) {
       return (
         <div className="mb-8">
           <h1 className="text-2xl font-bold text-gray-900 mb-2" style={{ color: settings.brandColor }}>
-            {data.companyName || t('invoice.companyNamePlaceholder')}
+            {data.companyName || t('invoice.defaultCompanyName')}
           </h1>
           <p className="text-sm text-gray-500 whitespace-pre-line leading-relaxed">
             {data.companyAddress}
@@ -76,7 +76,7 @@ export default function BlockRenderer({ block }: BlockRendererProps) {
       return (
         <div className="mb-8">
           <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">{t('invoice.billTo')}</h3>
-          <p className="text-lg font-medium text-gray-900 mb-1">{data.clientName || t('invoice.clientNamePlaceholder')}</p>
+          <p className="text-lg font-medium text-gray-900 mb-1">{data.clientName || t('invoice.defaultClientName')}</p>
           <p className="text-sm text-gray-500 whitespace-pre-line leading-relaxed max-w-sm">
             {data.clientAddress}
           </p>
