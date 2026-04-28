@@ -137,6 +137,10 @@ export default function InvoiceForm({ data, onChange }: InvoiceFormProps) {
           <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wider mb-4">{t('form.invoiceTitle')}</h3>
           <div className="grid grid-cols-1 gap-4">
             <div className="space-y-1">
+              <label className="text-xs font-medium text-gray-500">{t('form.invoiceName')}</label>
+              <input type="text" name="invoiceName" value={data.invoiceName || ''} onChange={handleChange} placeholder={`${data.documentTitle || t('invoice.defaultTitle')} ${data.invoiceNumber || t('invoice.draft')}`} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all text-sm" />
+            </div>
+            <div className="space-y-1">
               <label className="text-xs font-medium text-gray-500">{t('form.invoiceNumber')}</label>
               <input type="text" name="invoiceNumber" value={data.invoiceNumber} onChange={handleChange} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all text-sm font-mono" />
             </div>

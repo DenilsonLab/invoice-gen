@@ -84,6 +84,7 @@
     "clientPhone": "Client Phone",
     "clientAddress": "Client Address",
     "invoiceTitle": "Invoice Details",
+    "invoiceName": "File / Document Name",
     "invoiceNumber": "Invoice Number",
     "issueDate": "Issue Date",
     "dueDate": "Due Date",

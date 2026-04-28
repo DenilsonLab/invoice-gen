@@ -84,6 +84,7 @@
     "clientPhone": "Teléfono del Cliente",
     "clientAddress": "Dirección del Cliente",
     "invoiceTitle": "Detalles de la Factura",
+    "invoiceName": "Nombre del Archivo / Documento",
     "invoiceNumber": "Número de Factura",
     "issueDate": "Fecha de Emisión",
     "dueDate": "Fecha de Vencimiento",

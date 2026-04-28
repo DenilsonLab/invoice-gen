@@ -1,6 +1,7 @@
 import { toPng } from 'html-to-image';
 import jsPDF from 'jspdf';
 import { InvoiceData } from '../types';
+import i18n from '../i18n';
 
 export const generatePdf = async (data: InvoiceData) => {
   const element = document.getElementById('invoice-canvas');
@@ -10,10 +11,9 @@ export const generatePdf = async (data: InvoiceData) => {
   }
 
   // Configuración del nombre del archivo
-  const docTitle = data.documentTitle || 'Factura';
-  const invoiceNumber = data.invoiceNumber || 'Borrador';
-  const clientName = data.clientName ? `_${data.clientName.replace(/\s+/g, '-')}` : '';
-  const filename = `${docTitle}_${invoiceNumber}${clientName}.pdf`;
+  const t = i18n.t;
+  const defaultFilename = `${data.documentTitle || t('invoice.defaultTitle')}_${data.invoiceNumber || t('invoice.draft')}`;
+  const filename = data.invoiceName ? `${data.invoiceName.replace(/\s+/g, '-')}.pdf` : `${defaultFilename.replace(/\s+/g, '-')}.pdf`;
 
   try {
     // Generar imagen PNG del elemento

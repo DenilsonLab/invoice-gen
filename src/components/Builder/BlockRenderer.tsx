@@ -40,15 +40,15 @@ export default function BlockRenderer({ block }: BlockRendererProps) {
             <h2 className="text-4xl font-light text-gray-300 tracking-widest uppercase mb-4">{data.documentTitle || t('invoice.defaultTitle')}</h2>
             <div className="space-y-1">
               <p className="text-sm font-medium text-gray-900">
-                <span className="text-gray-500 font-normal mr-2">{t('invoice.numberAbbr')}</span>
+                <span className="text-gray-500 font-normal mr-2">{t('invoice.number')}</span>
                 {data.invoiceNumber}
               </p>
               <p className="text-sm font-medium text-gray-900">
-                <span className="text-gray-500 font-normal mr-2">{t('invoice.dateAbbr')}</span>
+                <span className="text-gray-500 font-normal mr-2">{t('invoice.date')}</span>
                 {formatDate(data.issueDate)}
               </p>
               <p className="text-sm font-medium text-gray-900">
-                <span className="text-gray-500 font-normal mr-2">{t('invoice.dueAbbr')}</span>
+                <span className="text-gray-500 font-normal mr-2">{t('invoice.dueDate')}</span>
                 {formatDate(data.dueDate)}
               </p>
             </div>
@@ -112,7 +112,7 @@ export default function BlockRenderer({ block }: BlockRendererProps) {
             <thead>
               <tr className="border-b-2" style={{ borderColor: settings.brandColor }}>
                 <th className="py-3 text-xs font-bold text-gray-900 uppercase tracking-wider w-1/2">{t('form.description')}</th>
-                <th className="py-3 text-xs font-bold text-gray-900 uppercase tracking-wider text-right">{t('invoice.qtyAbbr')}</th>
+                <th className="py-3 text-xs font-bold text-gray-900 uppercase tracking-wider text-right">{t('invoice.qty')}</th>
                 <th className="py-3 text-xs font-bold text-gray-900 uppercase tracking-wider text-right">{t('form.price')}</th>
                 <th className="py-3 text-xs font-bold text-gray-900 uppercase tracking-wider text-right">{t('invoice.total')}</th>
               </tr>

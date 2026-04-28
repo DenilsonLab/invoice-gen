@@ -43,7 +43,8 @@ export default function HeaderActions() {
   const handleSave = async () => {
     setIsSaving(true);
     try {
-      const title = data.clientName ? `Factura - ${data.clientName}` : `Factura ${data.invoiceNumber}`;
+      const defaultTitle = `${data.documentTitle || t('invoice.defaultTitle')} ${data.invoiceNumber || t('invoice.draft')}`;
+      const title = data.invoiceName || defaultTitle;
       const payload = { title, data, layout, settings };
 
       let res;

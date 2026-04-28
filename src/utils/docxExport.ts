@@ -66,21 +66,21 @@ export const generateDocx = async (data: InvoiceData, layout: InvoiceBlock[], se
                         alignment: AlignmentType.RIGHT,
                         spacing: { before: 200 },
                         children: [
-                          new TextRun({ text: `${t('invoice.numberAbbr')} `, color: "666666" }),
+                          new TextRun({ text: `${t('invoice.number')} `, color: "666666" }),
                           new TextRun({ text: data.invoiceNumber, bold: true }),
                         ],
                       }),
                       new Paragraph({
                         alignment: AlignmentType.RIGHT,
                         children: [
-                          new TextRun({ text: `${t('invoice.dateAbbr')} `, color: "666666" }),
+                          new TextRun({ text: `${t('invoice.date')} `, color: "666666" }),
                           new TextRun({ text: formatDate(data.issueDate), bold: true }),
                         ],
                       }),
                       new Paragraph({
                         alignment: AlignmentType.RIGHT,
                         children: [
-                          new TextRun({ text: `${t('invoice.dueAbbr')} `, color: "666666" }),
+                          new TextRun({ text: `${t('invoice.dueDate')} `, color: "666666" }),
                           new TextRun({ text: formatDate(data.dueDate), bold: true }),
                         ],
                       }),
@@ -160,7 +160,7 @@ export const generateDocx = async (data: InvoiceData, layout: InvoiceBlock[], se
           new TableRow({
             children: [
               new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: t('form.description'), bold: true })] })], shading: { fill: "F3F4F6" }, margins: { top: 100, bottom: 100, left: 100, right: 100 } }),
-              new TableCell({ children: [new Paragraph({ alignment: AlignmentType.RIGHT, children: [new TextRun({ text: t('invoice.qtyAbbr'), bold: true })] })], shading: { fill: "F3F4F6" }, margins: { top: 100, bottom: 100, left: 100, right: 100 } }),
+              new TableCell({ children: [new Paragraph({ alignment: AlignmentType.RIGHT, children: [new TextRun({ text: t('invoice.qty'), bold: true })] })], shading: { fill: "F3F4F6" }, margins: { top: 100, bottom: 100, left: 100, right: 100 } }),
               new TableCell({ children: [new Paragraph({ alignment: AlignmentType.RIGHT, children: [new TextRun({ text: t('form.price'), bold: true })] })], shading: { fill: "F3F4F6" }, margins: { top: 100, bottom: 100, left: 100, right: 100 } }),
               new TableCell({ children: [new Paragraph({ alignment: AlignmentType.RIGHT, children: [new TextRun({ text: t('invoice.total'), bold: true })] })], shading: { fill: "F3F4F6" }, margins: { top: 100, bottom: 100, left: 100, right: 100 } }),
             ],
@@ -314,6 +314,7 @@ export const generateDocx = async (data: InvoiceData, layout: InvoiceBlock[], se
   });
 
   const blob = await Packer.toBlob(doc);
-  const docTitle = data.documentTitle || t('invoice.defaultTitle');
-  saveAs(blob, `${docTitle}_${data.invoiceNumber || 'Borrador'}.docx`);
+  const defaultFilename = `${data.documentTitle || t('invoice.defaultTitle')}_${data.invoiceNumber || t('invoice.draft')}`;
+  const filename = data.invoiceName ? `${data.invoiceName.replace(/\s+/g, '-')}.docx` : `${defaultFilename.replace(/\s+/g, '-')}.docx`;
+  saveAs(blob, filename);
 };
