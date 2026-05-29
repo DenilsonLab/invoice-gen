@@ -4,7 +4,11 @@ import jwt from 'jsonwebtoken';
 import { v4 as uuidv4 } from 'uuid';
 
 const router = express.Router();
-const JWT_SECRET = process.env.JWT_SECRET || 'super-secret-key-for-dev';
+const JWT_SECRET = process.env.JWT_SECRET || (process.env.NODE_ENV === 'production' ? undefined : 'super-secret-key-for-dev');
+
+if (!JWT_SECRET) {
+  throw new Error('JWT_SECRET is required in production');
+}
 
 // Middleware to verify token
 const authenticate = (req: any, res: any, next: any) => {

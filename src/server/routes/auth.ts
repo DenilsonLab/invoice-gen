@@ -5,7 +5,17 @@ import db from '../db.js';
 import { v4 as uuidv4 } from 'uuid';
 
 const router = express.Router();
-const JWT_SECRET = process.env.JWT_SECRET || 'super-secret-key-for-dev';
+const JWT_SECRET = process.env.JWT_SECRET || (process.env.NODE_ENV === 'production' ? undefined : 'super-secret-key-for-dev');
+
+if (!JWT_SECRET) {
+  throw new Error('JWT_SECRET is required in production');
+}
+
+const authCookieOptions = {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === 'production',
+  sameSite: 'lax' as const,
+};
 
 // Register
 router.post('/register', async (req, res) => {
@@ -30,7 +40,7 @@ router.post('/register', async (req, res) => {
     });
 
     const token = jwt.sign({ id }, JWT_SECRET, { expiresIn: '7d' });
-    res.cookie('token', token, { httpOnly: true, secure: true, sameSite: 'none' });
+    res.cookie('token', token, authCookieOptions);
     res.json({ id, email, firstName, lastName, username });
   } catch (error) {
     res.status(500).json({ error: 'Server error' });
@@ -53,7 +63,7 @@ router.post('/login', async (req, res) => {
     }
 
     const token = jwt.sign({ id: user.id }, JWT_SECRET, { expiresIn: '7d' });
-    res.cookie('token', token, { httpOnly: true, secure: true, sameSite: 'none' });
+    res.cookie('token', token, authCookieOptions);
     res.json({
       id: user.id,
       email: user.email,
@@ -74,7 +84,7 @@ router.post('/login', async (req, res) => {
 
 // Logout
 router.post('/logout', (req, res) => {
-  res.clearCookie('token', { httpOnly: true, secure: true, sameSite: 'none' });
+  res.clearCookie('token', authCookieOptions);
   res.json({ message: 'Logged out' });
 });
 
@@ -172,7 +182,7 @@ router.get('/google/callback', async (req, res) => {
     }
 
     const token = jwt.sign({ id: user.id }, JWT_SECRET, { expiresIn: '7d' });
-    res.cookie('token', token, { httpOnly: true, secure: true, sameSite: 'none' });
+    res.cookie('token', token, authCookieOptions);
 
     // Send success message to parent window
     res.send(`

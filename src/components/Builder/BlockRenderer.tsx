@@ -1,4 +1,5 @@
 import React from 'react';
+import DOMPurify from 'dompurify';
 import { InvoiceBlock } from '../../types';
 import { useBuilder } from '../../context/BuilderContext';
 import { formatCurrency, formatDate } from '../../utils/formatters';
@@ -7,6 +8,12 @@ import { useTranslation } from 'react-i18next';
 interface BlockRendererProps {
   block: InvoiceBlock;
 }
+
+const sanitizeHtml = (html: string) => DOMPurify.sanitize(html, {
+  USE_PROFILES: { html: true },
+  ALLOWED_TAGS: ['p', 'br', 'strong', 'b', 'em', 'i', 'u', 's', 'code', 'pre', 'ol', 'ul', 'li', 'span'],
+  ALLOWED_ATTR: [],
+});
 
 export default function BlockRenderer({ block }: BlockRendererProps) {
   const { t } = useTranslation();
@@ -172,7 +179,7 @@ export default function BlockRenderer({ block }: BlockRendererProps) {
           <h4 className="font-medium text-gray-900 mb-1 text-sm">{t('form.additionalNotes')}</h4>
           <div
             className="prose prose-sm max-w-none text-gray-500"
-            dangerouslySetInnerHTML={{ __html: notesContent }}
+            dangerouslySetInnerHTML={{ __html: sanitizeHtml(notesContent) }}
           />
         </div>
       );
@@ -186,7 +193,7 @@ export default function BlockRenderer({ block }: BlockRendererProps) {
           <h4 className="font-medium text-gray-900 mb-1 text-sm">{t('form.terms')}</h4>
           <div
             className="prose prose-sm max-w-none text-gray-500"
-            dangerouslySetInnerHTML={{ __html: termsContent }}
+            dangerouslySetInnerHTML={{ __html: sanitizeHtml(termsContent) }}
           />
         </div>
       );
@@ -200,7 +207,7 @@ export default function BlockRenderer({ block }: BlockRendererProps) {
           <h4 className="font-medium text-gray-900 mb-1 text-sm pt-4 border-t border-gray-100">{t('form.bankDetails')}</h4>
           <div
             className="prose prose-sm max-w-none text-gray-500"
-            dangerouslySetInnerHTML={{ __html: bankContent }}
+            dangerouslySetInnerHTML={{ __html: sanitizeHtml(bankContent) }}
           />
         </div>
       );
@@ -217,7 +224,7 @@ export default function BlockRenderer({ block }: BlockRendererProps) {
         <div className="mb-6">
           <div
             className="text-sm text-gray-700 prose prose-sm max-w-none"
-            dangerouslySetInnerHTML={{ __html: block.content || `<p>${t('invoice.customTextPlaceholder')}</p>` }}
+            dangerouslySetInnerHTML={{ __html: sanitizeHtml(block.content || `<p>${t('invoice.customTextPlaceholder')}</p>`) }}
           />
         </div>
       );
