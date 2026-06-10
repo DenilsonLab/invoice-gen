@@ -3,6 +3,8 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import db from '../db.js';
 import { v4 as uuidv4 } from 'uuid';
+import { randomBytes } from 'crypto';
+import { loginSchema, parseBody, registerSchema } from '../validation.js';
 
 const router = express.Router();
 const JWT_SECRET = process.env.JWT_SECRET || (process.env.NODE_ENV === 'production' ? undefined : 'super-secret-key-for-dev');
@@ -17,9 +19,48 @@ const authCookieOptions = {
   sameSite: 'lax' as const,
 };
 
+const oauthStateCookieOptions = {
+  ...authCookieOptions,
+  maxAge: 10 * 60 * 1000,
+};
+
+const getAppUrl = () => {
+  const appUrl = process.env.APP_URL;
+  if (!appUrl) throw new Error('APP_URL is required for Google OAuth');
+  return appUrl.replace(/\/$/, '');
+};
+
+const createUsernameFromEmail = (email: string) => {
+  const base = email.split('@')[0].replace(/[^a-zA-Z0-9_-]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '') || 'user';
+  return `${base}${Math.floor(Math.random() * 1000)}`;
+};
+
+const rateLimitBuckets = new Map<string, { count: number; resetAt: number }>();
+
+const rateLimit = (name: string, maxAttempts: number, windowMs: number) => (req: any, res: any, next: any) => {
+  const now = Date.now();
+  const key = `${name}:${req.ip}:${req.body?.email || ''}`;
+  const bucket = rateLimitBuckets.get(key);
+
+  if (!bucket || bucket.resetAt <= now) {
+    rateLimitBuckets.set(key, { count: 1, resetAt: now + windowMs });
+    return next();
+  }
+
+  if (bucket.count >= maxAttempts) {
+    return res.status(429).json({ error: 'Too many attempts. Please try again later.' });
+  }
+
+  bucket.count += 1;
+  next();
+};
+
 // Register
-router.post('/register', async (req, res) => {
-  const { email, password, firstName, lastName } = req.body;
+router.post('/register', rateLimit('register', 5, 15 * 60 * 1000), async (req, res) => {
+  const parsed = parseBody(registerSchema, req.body);
+  if (parsed.error) return res.status(400).json({ error: parsed.error });
+
+  const { email, password, firstName, lastName } = parsed.data;
   try {
     const resDb = await db.execute({ sql: 'SELECT * FROM users WHERE email = ?', args: [email] });
     const existingUser = resDb.rows[0];
@@ -29,7 +70,7 @@ router.post('/register', async (req, res) => {
 
     const hashedPassword = await bcrypt.hash(password, 10);
     const id = uuidv4();
-    const username = email.split('@')[0] + Math.floor(Math.random() * 1000);
+    const username = createUsernameFromEmail(email);
 
     await db.execute({
       sql: `
@@ -48,8 +89,11 @@ router.post('/register', async (req, res) => {
 });
 
 // Login
-router.post('/login', async (req, res) => {
-  const { email, password } = req.body;
+router.post('/login', rateLimit('login', 10, 15 * 60 * 1000), async (req, res) => {
+  const parsed = parseBody(loginSchema, req.body);
+  if (parsed.error) return res.status(400).json({ error: parsed.error });
+
+  const { email, password } = parsed.data;
   try {
     const resDb = await db.execute({ sql: 'SELECT * FROM users WHERE email = ?', args: [email] });
     const user = resDb.rows[0] as any;
@@ -111,25 +155,36 @@ router.get('/me', async (req, res) => {
 
 // Google Auth URL (Popup flow)
 router.get('/google/url', (req, res) => {
-  const redirectUri = `${process.env.APP_URL}/api/auth/google/callback`;
+  const appUrl = getAppUrl();
+  const redirectUri = `${appUrl}/api/auth/google/callback`;
+  const state = randomBytes(32).toString('hex');
   const params = new URLSearchParams({
     client_id: process.env.GOOGLE_CLIENT_ID || '',
     redirect_uri: redirectUri,
     response_type: 'code',
     scope: 'email profile',
     access_type: 'offline',
-    prompt: 'consent'
+    prompt: 'consent',
+    state,
   });
 
+  res.cookie('oauth_state', state, oauthStateCookieOptions);
   res.json({ url: `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}` });
 });
 
 // Google Callback
 router.get('/google/callback', async (req, res) => {
-  const { code } = req.query;
-  const redirectUri = `${process.env.APP_URL}/api/auth/google/callback`;
+  const { code, state } = req.query;
+  const appUrl = getAppUrl();
+  const redirectUri = `${appUrl}/api/auth/google/callback`;
 
   try {
+    if (!code || state !== req.cookies.oauth_state) {
+      return res.status(400).send('Invalid OAuth state');
+    }
+
+    res.clearCookie('oauth_state', authCookieOptions);
+
     // Exchange code for tokens
     const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
       method: 'POST',
@@ -162,7 +217,7 @@ router.get('/google/callback', async (req, res) => {
     if (!user) {
       // Create new user
       const id = uuidv4();
-      const username = userData.email.split('@')[0] + Math.floor(Math.random() * 1000);
+      const username = createUsernameFromEmail(userData.email);
 
       await db.execute({
         sql: `
@@ -190,7 +245,7 @@ router.get('/google/callback', async (req, res) => {
         <body>
           <script>
             if (window.opener) {
-              window.opener.postMessage({ type: 'OAUTH_AUTH_SUCCESS' }, '*');
+              window.opener.postMessage({ type: 'OAUTH_AUTH_SUCCESS' }, '${appUrl}');
               window.close();
             } else {
               window.location.href = '/';

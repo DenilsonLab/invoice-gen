@@ -5,7 +5,8 @@
     "cancel": "Cancelar",
     "edit": "Editar",
     "delete": "Eliminar",
-    "loading": "Cargando..."
+    "loading": "Cargando...",
+    "genericError": "Ocurrió un error. Inténtalo nuevamente."
   },
   "nav": {
     "dashboard": "Mis Facturas",
@@ -22,7 +23,26 @@
     "date": "Fecha:",
     "total": "Total:",
     "unnamed": "Sin nombre",
+    "loadingInvoices": "Cargando facturas...",
     "deleteConfirm": "¿Estás seguro de que deseas eliminar esta factura?"
+  },
+  "clients": {
+    "save": "Guardar cliente",
+    "update": "Actualizar cliente",
+    "savedClients": "Clientes guardados",
+    "selectPlaceholder": "Seleccionar cliente guardado",
+    "quickFill": "Rellenar rápido",
+    "edit": "Editar cliente",
+    "delete": "Borrar cliente",
+    "saved": "Cliente guardado.",
+    "deleted": "Cliente eliminado.",
+    "nameRequired": "El nombre del cliente es obligatorio.",
+    "saveError": "No se pudo guardar el cliente.",
+    "deleteError": "No se pudo eliminar el cliente.",
+    "deleteConfirm": "¿Eliminar este cliente guardado?"
+  },
+  "publicInvoice": {
+    "downloadPdf": "Descargar PDF"
   },
   "builder": {
     "tabs": {
@@ -67,8 +87,37 @@
       "generating": "Generando...",
       "print": "Imprimir",
       "saveSuccess": "Factura guardada exitosamente.",
+      "publish": "Publicar",
+      "publishSuccess": "Factura publicada exitosamente.",
       "saveError": "Error al guardar la factura.",
-      "loadError": "Error al cargar la factura."
+      "loadError": "Error al cargar la factura.",
+      "docxError": "Hubo un error al generar el archivo DOCX.",
+      "pdfError": "Hubo un error al generar el archivo PDF."
+    },
+    "menu": {
+      "invoice": "Factura",
+      "export": "Exportar"
+    },
+    "canvas": {
+      "empty": "Arrastra elementos aquí para construir tu factura"
+    },
+    "editor": {
+      "placeholder": "Escribe tu texto aquí..."
+    },
+    "status": {
+      "draft": "Borrador",
+      "published": "Publicada",
+      "autosaving": "Guardando borrador...",
+      "autosaved": "Borrador guardado"
+    },
+    "share": {
+      "title": "Compartir",
+      "disabledDraft": "Las facturas en borrador no se pueden compartir.",
+      "copyLink": "Copiar link",
+      "emailLink": "Enviar link",
+      "sendPdf": "Enviar PDF",
+      "copied": "Link público copiado.",
+      "emailBody": "Puedes ver la factura aquí:"
     }
   },
   "form": {
@@ -101,7 +150,8 @@
     "additionalNotes": "Notas Adicionales",
     "terms": "Términos y Condiciones",
     "bankDetails": "Datos de Transferencia",
-    "emptyCanvas": "Agrega bloques al lienzo para habilitar los campos de datos."
+    "emptyCanvas": "Agrega bloques al lienzo para habilitar los campos de datos.",
+    "removeItem": "Eliminar artículo"
   },
   "invoice": {
     "defaultTitle": "FACTURA",
@@ -134,7 +184,6 @@
     "email": "Email",
     "password": "Contraseña",
     "loginBtn": "Iniciar sesión",
-    "orContinueWith": "O continuar con",
     "noAccount": "¿No tienes cuenta?",
     "signup": "Regístrate",
     "registerTitle": "Crea tu cuenta",
@@ -143,6 +192,24 @@
     "username": "Nombre de usuario",
     "registerBtn": "Registrarse",
     "hasAccount": "¿Ya tienes una cuenta?",
-    "loginLink": "Inicia sesión"
+    "loginLink": "Inicia sesión",
+    "showPassword": "Mostrar contraseña",
+    "hidePassword": "Ocultar contraseña"
+  },
+  "profile": {
+    "personalInfo": "Información Personal",
+    "updateSuccess": "Perfil actualizado exitosamente",
+    "emailLocked": "El correo electrónico no se puede cambiar.",
+    "preferredCurrency": "Moneda preferida",
+    "companyData": "Datos de Empresa (Para Facturas)",
+    "companyEmail": "Email de la Empresa",
+    "saveChanges": "Guardar Cambios",
+    "savedButton": "Guardado",
+    "savedTitle": "Cambios guardados",
+    "errorTitle": "No se pudo guardar",
+    "changePassword": "Cambiar Contraseña",
+    "currentPassword": "Contraseña Actual",
+    "newPassword": "Nueva Contraseña",
+    "updatePassword": "Actualizar Contraseña"
   }
 }

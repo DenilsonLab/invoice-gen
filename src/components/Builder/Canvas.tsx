@@ -3,8 +3,10 @@ import { useDroppable } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { useBuilder } from '../../context/BuilderContext';
 import SortableBlock from './SortableBlock';
+import { useTranslation } from 'react-i18next';
 
 export default function Canvas() {
+  const { t } = useTranslation();
   const { layout, settings } = useBuilder();
   const { setNodeRef } = useDroppable({
     id: 'canvas',
@@ -25,7 +27,7 @@ export default function Canvas() {
             ))}
             {layout.length === 0 && (
               <div className="flex-grow flex items-center justify-center border-2 border-dashed border-gray-200 rounded-xl m-4 text-gray-400">
-                Arrastra elementos aquí para construir tu factura
+                {t('builder.canvas.empty')}
               </div>
             )}
           </div>

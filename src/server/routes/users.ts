@@ -1,6 +1,7 @@
 import express from 'express';
 import db from '../db.js';
 import jwt from 'jsonwebtoken';
+import { parseBody, passwordSchema, profileSchema } from '../validation.js';
 
 const router = express.Router();
 const JWT_SECRET = process.env.JWT_SECRET || (process.env.NODE_ENV === 'production' ? undefined : 'super-secret-key-for-dev');
@@ -8,6 +9,26 @@ const JWT_SECRET = process.env.JWT_SECRET || (process.env.NODE_ENV === 'producti
 if (!JWT_SECRET) {
   throw new Error('JWT_SECRET is required in production');
 }
+
+const rateLimitBuckets = new Map<string, { count: number; resetAt: number }>();
+
+const rateLimit = (name: string, maxAttempts: number, windowMs: number) => (req: any, res: any, next: any) => {
+  const now = Date.now();
+  const key = `${name}:${req.ip}:${req.user?.id || ''}`;
+  const bucket = rateLimitBuckets.get(key);
+
+  if (!bucket || bucket.resetAt <= now) {
+    rateLimitBuckets.set(key, { count: 1, resetAt: now + windowMs });
+    return next();
+  }
+
+  if (bucket.count >= maxAttempts) {
+    return res.status(429).json({ error: 'Too many attempts. Please try again later.' });
+  }
+
+  bucket.count += 1;
+  next();
+};
 
 // Middleware to verify token
 const authenticate = (req: any, res: any, next: any) => {
@@ -25,7 +46,10 @@ const authenticate = (req: any, res: any, next: any) => {
 
 // Update profile
 router.put('/profile', authenticate, async (req: any, res: any) => {
-  const { firstName, lastName, username, preferredCurrency, companyName, companyEmail, companyPhone, companyAddress, bankAddress } = req.body;
+  const parsed = parseBody(profileSchema, req.body);
+  if (parsed.error) return res.status(400).json({ error: parsed.error });
+
+  const { firstName, lastName, username, preferredCurrency, companyName, companyEmail, companyPhone, companyAddress, bankAddress } = parsed.data;
   const userId = req.user.id;
 
   try {
@@ -57,8 +81,11 @@ router.put('/profile', authenticate, async (req: any, res: any) => {
 });
 
 // Update password
-router.put('/password', authenticate, async (req: any, res: any) => {
-  const { currentPassword, newPassword } = req.body;
+router.put('/password', authenticate, rateLimit('password', 5, 15 * 60 * 1000), async (req: any, res: any) => {
+  const parsed = parseBody(passwordSchema, req.body);
+  if (parsed.error) return res.status(400).json({ error: parsed.error });
+
+  const { currentPassword, newPassword } = parsed.data;
   const userId = req.user.id;
 
   try {

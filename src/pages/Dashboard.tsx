@@ -9,6 +9,7 @@ export default function Dashboard() {
   const { t } = useTranslation();
   const { user, logout } = useAuth();
   const [invoices, setInvoices] = useState<any[]>([]);
+  const [loadingInvoices, setLoadingInvoices] = useState(true);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -16,6 +17,7 @@ export default function Dashboard() {
   }, []);
 
   const fetchInvoices = async () => {
+    setLoadingInvoices(true);
     try {
       const res = await fetch('/api/invoices');
       if (res.ok) {
@@ -24,6 +26,8 @@ export default function Dashboard() {
       }
     } catch (error) {
       console.error('Failed to fetch invoices', error);
+    } finally {
+      setLoadingInvoices(false);
     }
   };
 
@@ -47,23 +51,27 @@ export default function Dashboard() {
   return (
     <div className="min-h-screen bg-[#f5f5f4] text-gray-900 font-sans">
       <header className="bg-white border-b border-gray-200 sticky top-0 z-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-2">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
+          <div className="flex shrink-0 items-center gap-2">
             <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white">
               <FileText size={20} />
             </div>
             <span className="font-semibold text-lg tracking-tight">InvoiceGen Pro</span>
           </div>
-          
-          <div className="flex items-center gap-4">
-            <Link to="/profile" className="flex items-center gap-2 text-sm font-medium text-gray-600 hover:text-gray-900">
-              <UserIcon size={16} />
-              <span>{user?.username}</span>
-            </Link>
-            <LanguageSwitcher />
+           
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1 rounded-xl border border-gray-200 bg-gray-50 p-1 shadow-sm">
+              <Link to="/profile" className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-gray-600 transition-colors hover:bg-white hover:text-gray-900">
+                <UserIcon size={16} />
+                <span>{user?.username}</span>
+              </Link>
+              <div className="hidden sm:block">
+                <LanguageSwitcher />
+              </div>
+            </div>
             <button 
               onClick={handleLogout}
-              className="flex items-center gap-2 text-sm font-medium text-red-600 hover:text-red-700"
+              className="flex items-center gap-2 rounded-xl border border-red-100 bg-red-50 px-3 py-2 text-sm font-medium text-red-600 transition-colors hover:bg-red-100 hover:text-red-700"
             >
               <LogOut size={16} />
               <span className="hidden sm:inline">{t('nav.logout')}</span>
@@ -73,7 +81,7 @@ export default function Dashboard() {
       </header>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="flex justify-between items-center mb-8">
+        <div className="flex justify-between items-center gap-4 mb-8">
           <h1 className="text-2xl font-bold text-gray-900">{t('dashboard.title')}</h1>
           <Link 
             to="/builder"
@@ -84,7 +92,32 @@ export default function Dashboard() {
           </Link>
         </div>
 
-        {invoices.length === 0 ? (
+        {loadingInvoices ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" aria-label={t('dashboard.loadingInvoices')}>
+            {Array.from({ length: 6 }).map((_, index) => (
+              <div key={index} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden animate-pulse">
+                <div className="p-6">
+                  <div className="flex justify-between items-start mb-5">
+                    <div className="h-5 w-36 rounded bg-gray-200" />
+                    <div className="space-y-2">
+                      <div className="h-5 w-16 rounded-full bg-gray-200" />
+                      <div className="h-5 w-20 rounded-full bg-gray-100" />
+                    </div>
+                  </div>
+                  <div className="space-y-3">
+                    <div className="h-4 w-44 rounded bg-gray-100" />
+                    <div className="h-4 w-32 rounded bg-gray-100" />
+                    <div className="h-4 w-28 rounded bg-gray-100" />
+                  </div>
+                </div>
+                <div className="bg-gray-50 px-6 py-3 border-t border-gray-100 flex justify-end gap-3">
+                  <div className="h-4 w-14 rounded bg-gray-200" />
+                  <div className="h-4 w-16 rounded bg-gray-200" />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : invoices.length === 0 ? (
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
             <FileText size={48} className="mx-auto text-gray-300 mb-4" />
             <h3 className="text-lg font-medium text-gray-900 mb-2">{t('dashboard.noInvoices')}</h3>
@@ -104,9 +137,14 @@ export default function Dashboard() {
                 <div className="p-6">
                   <div className="flex justify-between items-start mb-4">
                     <h3 className="text-lg font-semibold text-gray-900 truncate">{invoice.title}</h3>
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                      {invoice.data.invoiceNumber}
-                    </span>
+                    <div className="flex flex-col items-end gap-1">
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                        {invoice.data.invoiceNumber}
+                      </span>
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${invoice.status === 'published' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>
+                        {invoice.status === 'published' ? t('builder.status.published') : t('builder.status.draft')}
+                      </span>
+                    </div>
                   </div>
                   <div className="space-y-2 text-sm text-gray-500">
                     <p><span className="font-medium text-gray-700">{t('dashboard.client')}</span> {invoice.data.clientName || t('dashboard.unnamed')}</p>

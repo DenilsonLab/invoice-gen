@@ -1,42 +1,22 @@
-import React, { useEffect, useState } from 'react';
-import { Printer, Download, Save, RefreshCw, FileText } from 'lucide-react';
+import React, { useState } from 'react';
+import { CheckCircle2, ChevronDown, Copy, Download, FileText, Mail, Printer, Save, Share2 } from 'lucide-react';
 import { useBuilder } from '../../context/BuilderContext';
-import { generateDocx } from '../../utils/docxExport';
-import { generatePdf } from '../../utils/pdfExport';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 
 export default function HeaderActions() {
   const { t } = useTranslation();
-  const { data, layout, settings, setData, setLayout, setSettings } = useBuilder();
+  const { data, setData, layout, settings, invoiceId, status, publicUrl, isAutosaving, lastSavedAt, setInvoiceMeta } = useBuilder();
   const { id } = useParams();
   const navigate = useNavigate();
   const [isSaving, setIsSaving] = useState(false);
   const [isExportingPdf, setIsExportingPdf] = useState(false);
+  const [activeMenu, setActiveMenu] = useState<'invoice' | 'export' | null>(null);
 
-  useEffect(() => {
-    if (id) {
-      const loadInvoice = async () => {
-        try {
-          const res = await fetch(`/api/invoices/${id}`);
-          if (res.ok) {
-            const invoice = await res.json();
-            setData(invoice.data);
-            setLayout(invoice.layout);
-            setSettings(invoice.settings);
-          } else {
-            alert(t('builder.actions.loadError'));
-            navigate('/dashboard');
-          }
-        } catch (error) {
-          console.error('Failed to load invoice', error);
-        }
-      };
-      loadInvoice();
-    }
-  }, [id, setData, setLayout, setSettings, navigate]);
+  const fullPublicUrl = publicUrl ? `${window.location.origin}${publicUrl}` : '';
 
   const handlePrint = () => {
+    setActiveMenu(null);
     window.print();
   };
 
@@ -46,16 +26,17 @@ export default function HeaderActions() {
       const defaultTitle = `${data.documentTitle || t('invoice.defaultTitle')} ${data.invoiceNumber || t('invoice.draft')}`;
       const title = data.invoiceName || defaultTitle;
       const payload = { title, data, layout, settings };
+      const currentId = invoiceId || id;
 
       let res;
-      if (id) {
-        res = await fetch(`/api/invoices/${id}`, {
+      if (currentId) {
+        res = await fetch(`/api/invoices/${currentId}/publish`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
         });
       } else {
-        res = await fetch('/api/invoices', {
+        res = await fetch('/api/invoices/publish', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
@@ -64,10 +45,13 @@ export default function HeaderActions() {
 
       if (res.ok) {
         const savedInvoice = await res.json();
-        if (!id) {
+        setInvoiceMeta({ id: savedInvoice.id, status: savedInvoice.status || 'published', publicUrl: savedInvoice.publicUrl || null });
+        if (savedInvoice.data) setData(savedInvoice.data);
+        if (!currentId) {
           navigate(`/builder/${savedInvoice.id}`, { replace: true });
         }
-        alert(t('builder.actions.saveSuccess'));
+        alert(t('builder.actions.publishSuccess'));
+        setActiveMenu(null);
       } else {
         alert(t('builder.actions.saveError'));
       }
@@ -79,22 +63,46 @@ export default function HeaderActions() {
     }
   };
 
+  const handleCopyLink = async () => {
+    if (!fullPublicUrl) return;
+    await navigator.clipboard.writeText(fullPublicUrl);
+    setActiveMenu(null);
+    alert(t('builder.share.copied'));
+  };
+
+  const handleEmailLink = () => {
+    if (!fullPublicUrl) return;
+    const subject = encodeURIComponent(data.invoiceName || `${data.documentTitle || t('invoice.defaultTitle')} ${data.invoiceNumber}`);
+    const body = encodeURIComponent(`${t('builder.share.emailBody')}\n\n${fullPublicUrl}`);
+    window.location.href = `mailto:?subject=${subject}&body=${body}`;
+    setActiveMenu(null);
+  };
+
+  const handleSharePdf = async () => {
+    setActiveMenu(null);
+    await handleExportPdf();
+  };
+
   const handleExportDocx = async () => {
+    setActiveMenu(null);
     try {
+      const { generateDocx } = await import('../../utils/docxExport');
       await generateDocx(data, layout, settings);
     } catch (error) {
       console.error('Error generating DOCX:', error);
-      alert('Hubo un error al generar el archivo DOCX.');
+      alert(t('builder.actions.docxError'));
     }
   };
 
   const handleExportPdf = async () => {
+    setActiveMenu(null);
     setIsExportingPdf(true);
     try {
+      const { generatePdf } = await import('../../utils/pdfExport');
       await generatePdf(data);
     } catch (error) {
       console.error('Error generating PDF:', error);
-      alert('Hubo un error al generar el archivo PDF.');
+      alert(t('builder.actions.pdfError'));
     } finally {
       setIsExportingPdf(false);
     }
@@ -102,45 +110,104 @@ export default function HeaderActions() {
 
   return (
     <div className="flex items-center gap-2">
-      <button 
-        onClick={handleSave}
-        disabled={isSaving}
-        className="flex items-center gap-2 px-3 py-2 bg-white border border-gray-200 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors shadow-sm disabled:opacity-50"
-        title={t('common.save')}
-      >
-        <Save size={16} />
-        <span className="hidden sm:inline">{isSaving ? t('common.saving') : t('common.save')}</span>
-      </button>
+      <div className="hidden xl:flex items-center gap-2 px-3 py-2 rounded-full bg-gray-50 border border-gray-200 text-xs text-gray-500 shadow-sm">
+        <span className={`h-2 w-2 rounded-full ${status === 'published' ? 'bg-green-500' : 'bg-amber-400'}`} />
+        <span className="font-medium text-gray-700">{status === 'published' ? t('builder.status.published') : t('builder.status.draft')}</span>
+        {status === 'draft' && <span>{isAutosaving ? t('builder.status.autosaving') : lastSavedAt ? t('builder.status.autosaved') : ''}</span>}
+      </div>
 
-      <div className="w-px h-6 bg-gray-200 mx-1"></div>
+      <div className="relative">
+        <button
+          onClick={() => setActiveMenu((value) => value === 'invoice' ? null : 'invoice')}
+          className="flex items-center gap-2 rounded-xl border border-green-200 bg-green-50 px-3 py-2 text-sm font-semibold text-green-800 shadow-sm transition-colors hover:bg-green-100"
+          title={t('builder.menu.invoice')}
+        >
+          <CheckCircle2 size={16} />
+          <span className="hidden sm:inline">{t('builder.menu.invoice')}</span>
+          <ChevronDown size={15} className={`transition-transform ${activeMenu === 'invoice' ? 'rotate-180' : ''}`} />
+        </button>
 
-      <button 
-        onClick={handleExportDocx}
-        className="flex items-center gap-2 px-3 py-2 bg-blue-50 text-blue-700 border border-blue-200 text-sm font-medium rounded-lg hover:bg-blue-100 transition-colors shadow-sm"
-        title={t('builder.actions.word')}
-      >
-        <FileText size={16} />
-        <span className="hidden sm:inline">{t('builder.actions.word')}</span>
-      </button>
+        {activeMenu === 'invoice' && (
+          <div className="absolute right-0 mt-2 w-64 rounded-xl border border-gray-200 bg-white p-2 shadow-xl z-50">
+            <div className="px-3 py-2 text-[11px] font-bold uppercase tracking-wider text-gray-400">{t('builder.menu.invoice')}</div>
+            <button 
+              onClick={handleSave}
+              disabled={isSaving}
+              className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm font-medium text-gray-800 transition-colors hover:bg-green-50 disabled:opacity-50"
+            >
+              {status === 'published' ? <Save size={16} className="text-green-600" /> : <CheckCircle2 size={16} className="text-green-600" />}
+              <span>{isSaving ? t('common.saving') : t('builder.actions.publish')}</span>
+            </button>
 
-      <button 
-        onClick={handleExportPdf}
-        disabled={isExportingPdf}
-        className="flex items-center gap-2 px-3 py-2 bg-red-50 text-red-700 border border-red-200 text-sm font-medium rounded-lg hover:bg-red-100 transition-colors shadow-sm disabled:opacity-50"
-        title={t('builder.actions.pdf')}
-      >
-        <Download size={16} />
-        <span className="hidden sm:inline">{isExportingPdf ? t('builder.actions.generating') : t('builder.actions.pdf')}</span>
-      </button>
+            <div className="my-2 border-t border-gray-100" />
+            <div className="px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-gray-400">{t('builder.share.title')}</div>
+            <button
+              onClick={handleCopyLink}
+              disabled={status !== 'published' || !publicUrl}
+              className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm text-gray-700 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
+              title={status === 'published' ? t('builder.share.copyLink') : t('builder.share.disabledDraft')}
+            >
+              <Copy size={16} /> {t('builder.share.copyLink')}
+            </button>
+            <button
+              onClick={handleEmailLink}
+              disabled={status !== 'published' || !publicUrl}
+              className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm text-gray-700 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
+              title={status === 'published' ? t('builder.share.emailLink') : t('builder.share.disabledDraft')}
+            >
+              <Mail size={16} /> {t('builder.share.emailLink')}
+            </button>
+            <button
+              onClick={handleSharePdf}
+              disabled={status !== 'published' || !publicUrl || isExportingPdf}
+              className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm text-gray-700 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
+              title={status === 'published' ? t('builder.share.sendPdf') : t('builder.share.disabledDraft')}
+            >
+              <Share2 size={16} /> {t('builder.share.sendPdf')}
+            </button>
+          </div>
+        )}
+      </div>
 
-      <button 
-        onClick={handlePrint}
-        className="flex items-center gap-2 px-4 py-2 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-gray-800 transition-colors shadow-sm"
-        title={t('builder.actions.print')}
-      >
-        <Printer size={16} />
-        <span className="hidden sm:inline">{t('builder.actions.print')}</span>
-      </button>
+      <div className="relative">
+        <button
+          onClick={() => setActiveMenu((value) => value === 'export' ? null : 'export')}
+          className="flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm font-semibold text-gray-700 shadow-sm transition-colors hover:bg-gray-50"
+          title={t('builder.menu.export')}
+        >
+          <Download size={16} />
+          <span className="hidden sm:inline">{t('builder.menu.export')}</span>
+          <ChevronDown size={15} className={`transition-transform ${activeMenu === 'export' ? 'rotate-180' : ''}`} />
+        </button>
+
+        {activeMenu === 'export' && (
+          <div className="absolute right-0 mt-2 w-56 rounded-xl border border-gray-200 bg-white p-2 shadow-xl z-50">
+            <div className="px-3 py-2 text-[11px] font-bold uppercase tracking-wider text-gray-400">{t('builder.menu.export')}</div>
+            <button 
+              onClick={handleExportPdf}
+              disabled={isExportingPdf}
+              className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm text-gray-700 transition-colors hover:bg-red-50 disabled:opacity-50"
+            >
+              <Download size={16} className="text-red-600" />
+              <span>{isExportingPdf ? t('builder.actions.generating') : t('builder.actions.pdf')}</span>
+            </button>
+            <button 
+              onClick={handleExportDocx}
+              className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm text-gray-700 transition-colors hover:bg-blue-50"
+            >
+              <FileText size={16} className="text-blue-600" />
+              <span>{t('builder.actions.word')}</span>
+            </button>
+            <button 
+              onClick={handlePrint}
+              className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm text-gray-700 transition-colors hover:bg-gray-50"
+            >
+              <Printer size={16} className="text-gray-700" />
+              <span>{t('builder.actions.print')}</span>
+            </button>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

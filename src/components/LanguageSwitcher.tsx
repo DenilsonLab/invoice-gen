@@ -10,8 +10,8 @@ export default function LanguageSwitcher() {
   };
 
   return (
-    <div className="flex items-center gap-2 text-sm text-gray-600">
-      <Globe size={16} />
+    <div className="flex items-center gap-2 rounded-full border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-600 shadow-sm">
+      <Globe size={16} className="text-gray-400" />
       <select
         value={i18n.language.startsWith('en') ? 'en' : 'es'}
         onChange={handleLanguageChange}

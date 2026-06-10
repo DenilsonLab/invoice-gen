@@ -1,10 +1,11 @@
-import React from 'react';
-import { InvoiceData, InvoiceItem } from '../types';
-import { Plus, Trash2 } from 'lucide-react';
+import React, { lazy, Suspense, useEffect, useState } from 'react';
+import { InvoiceData, InvoiceItem, SavedClient } from '../types';
+import { CheckCircle2, Pencil, Plus, Save, Trash2, UserPlus } from 'lucide-react';
 import { useBuilder } from '../context/BuilderContext';
 import { useTranslation } from 'react-i18next';
-import ReactQuill from 'react-quill-new';
 import 'react-quill-new/dist/quill.snow.css';
+
+const ReactQuill = lazy(() => import('react-quill-new'));
 
 interface InvoiceFormProps {
   data: InvoiceData;
@@ -14,6 +15,10 @@ interface InvoiceFormProps {
 export default function InvoiceForm({ data, onChange }: InvoiceFormProps) {
   const { t } = useTranslation();
   const { layout } = useBuilder();
+  const [clients, setClients] = useState<SavedClient[]>([]);
+  const [selectedClientId, setSelectedClientId] = useState('');
+  const [clientFeedback, setClientFeedback] = useState('');
+  const [isSavingClient, setIsSavingClient] = useState(false);
 
   const hasBlock = (types: string[]) => layout.some(b => types.includes(b.type));
 
@@ -26,6 +31,21 @@ export default function InvoiceForm({ data, onChange }: InvoiceFormProps) {
   const showTerms = hasBlock(['terms']);
   const showBankDetails = hasBlock(['bank-details']);
 
+  useEffect(() => {
+    if (!showClient) return;
+
+    const loadClients = async () => {
+      try {
+        const res = await fetch('/api/clients');
+        if (res.ok) setClients(await res.json());
+      } catch (error) {
+        console.error('Failed to load clients', error);
+      }
+    };
+
+    loadClients();
+  }, [showClient]);
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     onChange({ ...data, [name]: value });
@@ -33,6 +53,74 @@ export default function InvoiceForm({ data, onChange }: InvoiceFormProps) {
 
   const handleQuillChange = (name: string, value: string) => {
     onChange({ ...data, [name]: value });
+  };
+
+  const applyClient = (client: SavedClient) => {
+    setSelectedClientId(client.id);
+    setClientFeedback('');
+    onChange({
+      ...data,
+      clientName: client.name,
+      clientEmail: client.email || '',
+      clientPhone: client.phone || '',
+      clientAddress: client.address || '',
+    });
+  };
+
+  const saveClient = async () => {
+    if (!data.clientName.trim()) {
+      setClientFeedback(t('clients.nameRequired'));
+      return;
+    }
+
+    setIsSavingClient(true);
+    setClientFeedback('');
+    const payload = {
+      name: data.clientName,
+      email: data.clientEmail,
+      phone: data.clientPhone || '',
+      address: data.clientAddress,
+    };
+
+    try {
+      const res = await fetch(selectedClientId ? `/api/clients/${selectedClientId}` : '/api/clients', {
+        method: selectedClientId ? 'PUT' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) throw new Error('Failed to save client');
+
+      const savedClient = await res.json();
+      setClients((current) => {
+        const exists = current.some((client) => client.id === savedClient.id);
+        const next = exists ? current.map((client) => client.id === savedClient.id ? savedClient : client) : [...current, savedClient];
+        return next.sort((a, b) => a.name.localeCompare(b.name));
+      });
+      setSelectedClientId(savedClient.id);
+      setClientFeedback(t('clients.saved'));
+    } catch (error) {
+      console.error('Failed to save client', error);
+      setClientFeedback(t('clients.saveError'));
+    } finally {
+      setIsSavingClient(false);
+    }
+  };
+
+  const deleteClient = async (clientId: string) => {
+    if (!confirm(t('clients.deleteConfirm'))) return;
+
+    try {
+      const res = await fetch(`/api/clients/${clientId}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error('Failed to delete client');
+
+      setClients((current) => current.filter((client) => client.id !== clientId));
+      if (selectedClientId === clientId) setSelectedClientId('');
+      setClientFeedback(t('clients.deleted'));
+    } catch (error) {
+      console.error('Failed to delete client', error);
+      setClientFeedback(t('clients.deleteError'));
+    }
   };
 
   const handleNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -70,8 +158,36 @@ export default function InvoiceForm({ data, onChange }: InvoiceFormProps) {
     ],
   };
 
+  const clientSearch = data.clientName.trim().toLowerCase();
+  const filteredClients = clientSearch
+    ? clients.filter((client) => `${client.name} ${client.email} ${client.phone}`.toLowerCase().includes(clientSearch)).slice(0, 5)
+    : clients.slice(0, 5);
+
   return (
     <div className="space-y-8">
+
+      {/* Invoice Details */}
+      {showDetails && (
+        <section>
+          <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wider mb-4">{t('form.invoiceTitle')}</h3>
+          <div className="grid grid-cols-1 gap-4">
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-gray-500">{t('form.invoiceNumber')}</label>
+              <input type="text" name="invoiceNumber" value={data.invoiceNumber} onChange={handleChange} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all text-sm font-mono" />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-gray-500">{t('form.issueDate')}</label>
+              <input type="date" name="issueDate" value={data.issueDate} onChange={handleChange} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all text-sm" />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-gray-500">{t('form.dueDate')}</label>
+              <input type="date" name="dueDate" value={data.dueDate} onChange={handleChange} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all text-sm" />
+            </div>
+          </div>
+        </section>
+      )}
+
+      {showDetails && (showCompany || showClient || showItems || showTotals || showNotes || showTerms || showBankDetails) && <hr className="border-gray-100" />}
 
       {/* Company Details */}
       {showCompany && (
@@ -107,12 +223,72 @@ export default function InvoiceForm({ data, onChange }: InvoiceFormProps) {
       {/* Client Details */}
       {showClient && (
         <section>
-          <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wider mb-4">{t('form.clientTitle')}</h3>
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wider">{t('form.clientTitle')}</h3>
+            <button
+              type="button"
+              onClick={saveClient}
+              disabled={isSavingClient}
+              className="inline-flex items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-700 transition-colors hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {selectedClientId ? <Save size={14} /> : <UserPlus size={14} />}
+              {isSavingClient ? t('common.saving') : selectedClientId ? t('clients.update') : t('clients.save')}
+            </button>
+          </div>
+
+          {clients.length > 0 && (
+            <div className="mb-4 rounded-xl border border-gray-200 bg-gray-50 p-3">
+              <label className="mb-2 block text-xs font-medium text-gray-500">{t('clients.savedClients')}</label>
+              <select
+                value={selectedClientId}
+                onChange={(event) => {
+                  const client = clients.find((item) => item.id === event.target.value);
+                  if (client) applyClient(client);
+                  else setSelectedClientId('');
+                }}
+                className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm outline-none transition-all focus:border-transparent focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">{t('clients.selectPlaceholder')}</option>
+                {clients.map((client) => <option key={client.id} value={client.id}>{client.name}</option>)}
+              </select>
+            </div>
+          )}
+
+          {clientFeedback && (
+            <div className="mb-4 flex items-center gap-2 rounded-lg border border-blue-100 bg-blue-50 px-3 py-2 text-xs font-medium text-blue-700">
+              <CheckCircle2 size={14} />
+              {clientFeedback}
+            </div>
+          )}
+
           <div className="grid grid-cols-1 gap-4">
             <div className="space-y-1">
               <label className="text-xs font-medium text-gray-500">{t('form.clientName')}</label>
               <input type="text" name="clientName" value={data.clientName} onChange={handleChange} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all text-sm" />
             </div>
+
+            {filteredClients.length > 0 && (
+              <div className="space-y-2 rounded-xl border border-gray-200 bg-white p-2 shadow-sm">
+                <p className="px-2 text-[11px] font-bold uppercase tracking-wider text-gray-400">{t('clients.quickFill')}</p>
+                {filteredClients.map((client) => (
+                  <div key={client.id} className="flex items-center justify-between gap-2 rounded-lg px-2 py-2 hover:bg-gray-50">
+                    <button type="button" onClick={() => applyClient(client)} className="min-w-0 flex-1 text-left">
+                      <span className="block truncate text-sm font-medium text-gray-800">{client.name}</span>
+                      <span className="block truncate text-xs text-gray-500">{client.email || client.phone || client.address}</span>
+                    </button>
+                    <div className="flex items-center gap-1">
+                      <button type="button" onClick={() => applyClient(client)} className="rounded-md p-1.5 text-blue-600 hover:bg-blue-50" title={t('clients.edit')}>
+                        <Pencil size={14} />
+                      </button>
+                      <button type="button" onClick={() => deleteClient(client.id)} className="rounded-md p-1.5 text-red-600 hover:bg-red-50" title={t('clients.delete')}>
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
             <div className="space-y-1">
               <label className="text-xs font-medium text-gray-500">{t('form.clientEmail')}</label>
               <input type="email" name="clientEmail" value={data.clientEmail} onChange={handleChange} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all text-sm" />
@@ -131,33 +307,6 @@ export default function InvoiceForm({ data, onChange }: InvoiceFormProps) {
 
       {showClient && (showDetails || showItems || showTotals || showNotes || showTerms) && <hr className="border-gray-100" />}
 
-      {/* Invoice Details */}
-      {showDetails && (
-        <section>
-          <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wider mb-4">{t('form.invoiceTitle')}</h3>
-          <div className="grid grid-cols-1 gap-4">
-            <div className="space-y-1">
-              <label className="text-xs font-medium text-gray-500">{t('form.invoiceName')}</label>
-              <input type="text" name="invoiceName" value={data.invoiceName || ''} onChange={handleChange} placeholder={`${data.documentTitle || t('invoice.defaultTitle')} ${data.invoiceNumber || t('invoice.draft')}`} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all text-sm" />
-            </div>
-            <div className="space-y-1">
-              <label className="text-xs font-medium text-gray-500">{t('form.invoiceNumber')}</label>
-              <input type="text" name="invoiceNumber" value={data.invoiceNumber} onChange={handleChange} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all text-sm font-mono" />
-            </div>
-            <div className="space-y-1">
-              <label className="text-xs font-medium text-gray-500">{t('form.issueDate')}</label>
-              <input type="date" name="issueDate" value={data.issueDate} onChange={handleChange} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all text-sm" />
-            </div>
-            <div className="space-y-1">
-              <label className="text-xs font-medium text-gray-500">{t('form.dueDate')}</label>
-              <input type="date" name="dueDate" value={data.dueDate} onChange={handleChange} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all text-sm" />
-            </div>
-          </div>
-        </section>
-      )}
-
-      {showDetails && (showItems || showTotals || showNotes || showTerms) && <hr className="border-gray-100" />}
-
       {/* Items */}
       {showItems && (
         <section>
@@ -172,7 +321,7 @@ export default function InvoiceForm({ data, onChange }: InvoiceFormProps) {
                   <button
                     onClick={() => removeItem(item.id)}
                     className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-md transition-colors"
-                    title="Eliminar artículo"
+                    title={t('form.removeItem')}
                   >
                     <Trash2 size={14} />
                   </button>
@@ -237,37 +386,43 @@ export default function InvoiceForm({ data, onChange }: InvoiceFormProps) {
                 {showNotes && (
                   <div className="space-y-1">
                     <label className="text-xs font-medium text-gray-500">{t('form.additionalNotes')}</label>
-                    <ReactQuill
-                      theme="snow"
-                      value={data.notes}
-                      onChange={(value) => handleQuillChange('notes', value)}
-                      modules={quillModules}
-                      className="bg-white rounded-lg"
-                    />
+                    <Suspense fallback={<div className="h-32 bg-gray-50 rounded-lg border border-gray-200" />}>
+                      <ReactQuill
+                        theme="snow"
+                        value={data.notes}
+                        onChange={(value) => handleQuillChange('notes', value)}
+                        modules={quillModules}
+                        className="bg-white rounded-lg"
+                      />
+                    </Suspense>
                   </div>
                 )}
                 {showTerms && (
                   <div className="space-y-1">
                     <label className="text-xs font-medium text-gray-500">{t('form.terms')}</label>
-                    <ReactQuill
-                      theme="snow"
-                      value={data.terms}
-                      onChange={(value) => handleQuillChange('terms', value)}
-                      modules={quillModules}
-                      className="bg-white rounded-lg"
-                    />
+                    <Suspense fallback={<div className="h-32 bg-gray-50 rounded-lg border border-gray-200" />}>
+                      <ReactQuill
+                        theme="snow"
+                        value={data.terms}
+                        onChange={(value) => handleQuillChange('terms', value)}
+                        modules={quillModules}
+                        className="bg-white rounded-lg"
+                      />
+                    </Suspense>
                   </div>
                 )}
                 {showBankDetails && (
                   <div className="space-y-1">
                     <label className="text-xs font-medium text-gray-500">{t('form.bankDetails')}</label>
-                    <ReactQuill
-                      theme="snow"
-                      value={data.bankAddress || ''}
-                      onChange={(value) => handleQuillChange('bankAddress', value)}
-                      modules={quillModules}
-                      className="bg-white rounded-lg"
-                    />
+                    <Suspense fallback={<div className="h-32 bg-gray-50 rounded-lg border border-gray-200" />}>
+                      <ReactQuill
+                        theme="snow"
+                        value={data.bankAddress || ''}
+                        onChange={(value) => handleQuillChange('bankAddress', value)}
+                        modules={quillModules}
+                        className="bg-white rounded-lg"
+                      />
+                    </Suspense>
                   </div>
                 )}
               </div>

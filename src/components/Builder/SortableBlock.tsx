@@ -1,12 +1,14 @@
-import React from 'react';
+import React, { lazy, Suspense } from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { InvoiceBlock } from '../../types';
 import { useBuilder } from '../../context/BuilderContext';
 import { GripVertical, Trash2 } from 'lucide-react';
 import BlockRenderer from './BlockRenderer';
-import ReactQuill from 'react-quill-new';
 import 'react-quill-new/dist/quill.snow.css';
+import { useTranslation } from 'react-i18next';
+
+const ReactQuill = lazy(() => import('react-quill-new'));
 
 interface SortableBlockProps {
   block: InvoiceBlock;
@@ -14,6 +16,7 @@ interface SortableBlockProps {
 }
 
 export default function SortableBlock({ block }: SortableBlockProps) {
+  const { t } = useTranslation();
   const { selectedBlockId, setSelectedBlockId, layout, setLayout } = useBuilder();
   const {
     attributes,
@@ -77,16 +80,18 @@ export default function SortableBlock({ block }: SortableBlockProps) {
       <div className="print:p-0">
         {block.type === 'custom-text' && isSelected ? (
           <div className="mb-6 bg-white" onClick={(e) => e.stopPropagation()}>
-            <ReactQuill
-              theme="snow"
-              value={block.content || ''}
-              onChange={(content) => {
-                setLayout(layout.map(b => b.id === block.id ? { ...b, content } : b));
-              }}
-              modules={modules}
-              className="min-h-[100px]"
-              placeholder="Escribe tu texto aquí..."
-            />
+            <Suspense fallback={<div className="h-28 bg-gray-50 rounded-lg border border-gray-200" />}>
+              <ReactQuill
+                theme="snow"
+                value={block.content || ''}
+                onChange={(content) => {
+                  setLayout(layout.map(b => b.id === block.id ? { ...b, content } : b));
+                }}
+                modules={modules}
+                className="min-h-[100px]"
+                placeholder={t('builder.editor.placeholder')}
+              />
+            </Suspense>
           </div>
         ) : (
           <BlockRenderer block={block} />

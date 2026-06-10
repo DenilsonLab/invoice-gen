@@ -290,8 +290,9 @@ export const generateDocx = async (data: InvoiceData, layout: InvoiceBlock[], se
         break;
 
       case 'custom-text':
-        if (block.content) {
-          children.push(new Paragraph({ text: block.content, spacing: { before: 100, after: 100 } }));
+        const customText = stripHtml(block.content || '');
+        if (customText) {
+          children.push(new Paragraph({ text: customText, spacing: { before: 100, after: 100 } }));
         }
         break;
 

@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next';
 
 interface BlockRendererProps {
   block: InvoiceBlock;
+  key?: React.Key;
 }
 
 const sanitizeHtml = (html: string) => DOMPurify.sanitize(html, {

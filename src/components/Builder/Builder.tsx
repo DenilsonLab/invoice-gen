@@ -19,8 +19,10 @@ import Sidebar from './Sidebar';
 import Canvas from './Canvas';
 import { InvoiceBlock, BlockType } from '../../types';
 import BlockRenderer from './BlockRenderer';
+import { useTranslation } from 'react-i18next';
 
 export default function Builder() {
+  const { t } = useTranslation();
   const { layout, setLayout, selectedBlockId, setSelectedBlockId } = useBuilder();
   const [activeId, setActiveId] = useState<string | null>(null);
   const [activeType, setActiveType] = useState<BlockType | null>(null);
@@ -59,7 +61,7 @@ export default function Builder() {
       const newBlock: InvoiceBlock = {
         id: `block-${Date.now()}`,
         type: active.data.current.blockType as BlockType,
-        content: active.data.current.blockType === 'custom-text' ? 'Texto personalizado...' : undefined
+        content: active.data.current.blockType === 'custom-text' ? t('invoice.customTextPlaceholder') : undefined
       };
 
       if (over.id === 'canvas') {
@@ -85,7 +87,7 @@ export default function Builder() {
   const overlayBlock: InvoiceBlock | null = activeType ? {
     id: 'overlay',
     type: activeType,
-    content: activeType === 'custom-text' ? 'Texto personalizado...' : undefined
+    content: activeType === 'custom-text' ? t('invoice.customTextPlaceholder') : undefined
   } : null;
 
   return (

@@ -60,3 +60,28 @@ export interface InvoiceSettings {
   fontFamily: string;
 }
 
+export type InvoiceStatus = 'draft' | 'published';
+
+export interface SavedInvoice {
+  id: string;
+  title: string;
+  invoiceNumber?: string;
+  status: InvoiceStatus;
+  publicUrl?: string | null;
+  publishedAt?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+  data: InvoiceData;
+  layout: InvoiceBlock[];
+  settings: InvoiceSettings;
+}
+
+export interface SavedClient {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  address: string;
+  createdAt?: string;
+  updatedAt?: string;
+}

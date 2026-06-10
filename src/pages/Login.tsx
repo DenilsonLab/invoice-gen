@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { FileText, LogIn } from 'lucide-react';
+import { Eye, EyeOff, FileText } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import LanguageSwitcher from '../components/LanguageSwitcher';
 
@@ -9,6 +9,7 @@ export default function Login() {
   const { t } = useTranslation();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
@@ -32,43 +33,11 @@ export default function Login() {
         setError(data.error);
       }
     } catch (err) {
-      setError('An error occurred');
+      setError(t('common.genericError'));
     } finally {
       setIsLoading(false);
     }
   };
-
-  const handleGoogleLogin = async () => {
-    try {
-      const res = await fetch('/api/auth/google/url');
-      const { url } = await res.json();
-      const authWindow = window.open(url, 'oauth_popup', 'width=600,height=700');
-      if (!authWindow) {
-        alert('Please allow popups for this site to connect your account.');
-      }
-    } catch (err) {
-      setError('Failed to initialize Google login');
-    }
-  };
-
-  useEffect(() => {
-    const handleMessage = async (event: MessageEvent) => {
-      const origin = event.origin;
-      if (!origin.endsWith('.run.app') && !origin.includes('localhost')) {
-        return;
-      }
-      if (event.data?.type === 'OAUTH_AUTH_SUCCESS') {
-        const res = await fetch('/api/auth/me');
-        if (res.ok) {
-          const data = await res.json();
-          setUser(data);
-          navigate('/dashboard');
-        }
-      }
-    };
-    window.addEventListener('message', handleMessage);
-    return () => window.removeEventListener('message', handleMessage);
-  }, [navigate, setUser]);
 
   return (
     <div className="min-h-screen bg-[#f5f5f4] flex flex-col justify-center py-12 sm:px-6 lg:px-8 relative">
@@ -103,14 +72,22 @@ export default function Login() {
 
             <div>
               <label className="block text-sm font-medium text-gray-700">{t('auth.password')}</label>
-              <div className="mt-1">
+              <div className="mt-1 relative">
                 <input
-                  type="password"
+                  type={showPassword ? 'text' : 'password'}
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                  className="appearance-none block w-full px-3 py-2 pr-10 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((value) => !value)}
+                  className="absolute inset-y-0 right-0 flex items-center px-3 text-gray-400 hover:text-gray-600"
+                  aria-label={showPassword ? t('auth.hidePassword') : t('auth.showPassword')}
+                >
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
               </div>
             </div>
 
@@ -125,29 +102,6 @@ export default function Login() {
             </div>
           </form>
 
-          <div className="mt-6">
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-300" />
-              </div>
-              <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-white text-gray-500">{t('auth.orContinueWith')}</span>
-              </div>
-            </div>
-
-            <div className="mt-6">
-              <button
-                onClick={handleGoogleLogin}
-                className="w-full flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-500 hover:bg-gray-50"
-              >
-                <span className="sr-only">Sign in with Google</span>
-                <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M12.545,10.239v3.821h5.445c-0.712,2.315-2.647,3.972-5.445,3.972c-3.332,0-6.033-2.701-6.033-6.032s2.701-6.032,6.033-6.032c1.498,0,2.866,0.549,3.921,1.453l2.814-2.814C17.503,2.988,15.139,2,12.545,2C7.021,2,2.543,6.477,2.543,12s4.478,10,10.002,10c8.396,0,10.249-7.85,9.426-11.748L12.545,10.239z" />
-                </svg>
-              </button>
-            </div>
-          </div>
-          
           <div className="mt-6 text-center text-sm">
             <span className="text-gray-600">{t('auth.noAccount')} </span>
             <Link to="/register" className="font-medium text-blue-600 hover:text-blue-500">
