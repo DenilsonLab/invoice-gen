@@ -1,18 +1,31 @@
-import React from 'react';
+import React, { lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { BuilderProvider, useBuilder } from './context/BuilderContext';
 import Builder from './components/Builder/Builder';
 import HeaderActions from './components/Builder/HeaderActions';
-import Login from './pages/Login';
-import Register from './pages/Register';
-import Dashboard from './pages/Dashboard';
-import Profile from './pages/Profile';
-import PublicInvoice from './pages/PublicInvoice';
 import { FileText, ArrowLeft } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import LanguageSwitcher from './components/LanguageSwitcher';
+
+// Lazy load heavy components
+const Login = lazy(() => import('./pages/Login'));
+const Register = lazy(() => import('./pages/Register'));
+const Dashboard = lazy(() => import('./pages/Dashboard'));
+const Profile = lazy(() => import('./pages/Profile'));
+const PublicInvoice = lazy(() => import('./pages/PublicInvoice'));
+
+const LoadingFallback = () => (
+  <div className="min-h-screen flex items-center justify-center">
+    <div className="text-center">
+      <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white mx-auto mb-2">
+        <FileText size={20} />
+      </div>
+      <p className="text-gray-600">Cargando...</p>
+    </div>
+  </div>
+);
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -81,16 +94,18 @@ export default function App() {
   return (
     <AuthProvider>
       <Router>
-        <Routes>
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
-          <Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
-          <Route path="/profile" element={<PrivateRoute><Profile /></PrivateRoute>} />
-          <Route path="/builder" element={<PrivateRoute><BuilderLayout /></PrivateRoute>} />
-          <Route path="/builder/:id" element={<PrivateRoute><BuilderLayout /></PrivateRoute>} />
-          <Route path="/:username/:invoiceId" element={<PublicInvoice />} />
-          <Route path="/" element={<Navigate to="/dashboard" />} />
-        </Routes>
+        <Suspense fallback={<LoadingFallback />}>
+          <Routes>
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
+            <Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
+            <Route path="/profile" element={<PrivateRoute><Profile /></PrivateRoute>} />
+            <Route path="/builder" element={<PrivateRoute><BuilderLayout /></PrivateRoute>} />
+            <Route path="/builder/:id" element={<PrivateRoute><BuilderLayout /></PrivateRoute>} />
+            <Route path="/:username/:invoiceId" element={<PublicInvoice />} />
+            <Route path="/" element={<Navigate to="/dashboard" />} />
+          </Routes>
+        </Suspense>
       </Router>
     </AuthProvider>
   );

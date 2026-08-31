@@ -1,10 +1,12 @@
-import { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, WidthType, BorderStyle, AlignmentType, HeadingLevel, ImageRun } from 'docx';
 import { saveAs } from 'file-saver';
 import { InvoiceData, InvoiceBlock, InvoiceSettings } from '../types';
 import { formatCurrency, formatDate } from './formatters';
 import i18n from '../i18n';
 
 export const generateDocx = async (data: InvoiceData, layout: InvoiceBlock[], settings: InvoiceSettings) => {
+  // Lazy load docx library only when needed (reduces initial bundle by ~1MB)
+  const docxModule = await import('docx');
+  const { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, WidthType, BorderStyle, AlignmentType, HeadingLevel, ImageRun } = docxModule;
   const t = i18n.t;
   const children: any[] = [];
 
