@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
 import { CheckCircle2, ChevronDown, Copy, Download, FileText, Mail, Printer, Save, Share2 } from 'lucide-react';
 import { useBuilder } from '../../context/BuilderContext';
+import { useDialog } from '../../context/DialogContext';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 
 export default function HeaderActions() {
   const { t } = useTranslation();
   const { data, setData, layout, settings, invoiceId, status, publicUrl, isAutosaving, lastSavedAt, setInvoiceMeta } = useBuilder();
+  const { notify } = useDialog();
   const { id } = useParams();
   const navigate = useNavigate();
   const [isSaving, setIsSaving] = useState(false);
@@ -50,14 +52,14 @@ export default function HeaderActions() {
         if (!currentId) {
           navigate(`/builder/${savedInvoice.id}`, { replace: true });
         }
-        alert(t('builder.actions.publishSuccess'));
+        notify({ type: 'success', message: t('builder.actions.publishSuccess') });
         setActiveMenu(null);
       } else {
-        alert(t('builder.actions.saveError'));
+        notify({ type: 'error', message: t('builder.actions.saveError') });
       }
     } catch (error) {
       console.error('Failed to save invoice', error);
-      alert(t('builder.actions.saveError'));
+      notify({ type: 'error', message: t('builder.actions.saveError') });
     } finally {
       setIsSaving(false);
     }
@@ -67,7 +69,7 @@ export default function HeaderActions() {
     if (!fullPublicUrl) return;
     await navigator.clipboard.writeText(fullPublicUrl);
     setActiveMenu(null);
-    alert(t('builder.share.copied'));
+    notify({ type: 'success', message: t('builder.share.copied') });
   };
 
   const handleEmailLink = () => {
@@ -90,7 +92,7 @@ export default function HeaderActions() {
       await generateDocx(data, layout, settings);
     } catch (error) {
       console.error('Error generating DOCX:', error);
-      alert(t('builder.actions.docxError'));
+      notify({ type: 'error', message: t('builder.actions.docxError') });
     }
   };
 
@@ -102,7 +104,7 @@ export default function HeaderActions() {
       await generatePdf(data);
     } catch (error) {
       console.error('Error generating PDF:', error);
-      alert(t('builder.actions.pdfError'));
+      notify({ type: 'error', message: t('builder.actions.pdfError') });
     } finally {
       setIsExportingPdf(false);
     }

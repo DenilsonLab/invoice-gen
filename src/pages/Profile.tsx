@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { AlertCircle, ArrowLeft, CheckCircle2, Eye, EyeOff, FileText, Loader2, Save } from 'lucide-react';
+import { AlertCircle, ArrowLeft, CheckCircle2, Eye, EyeOff, Image as ImageIcon, Loader2, Save, Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import LanguageSwitcher from '../components/LanguageSwitcher';
+import Logo from '../components/Logo';
 
 export default function Profile() {
   const { t } = useTranslation();
@@ -17,6 +18,7 @@ export default function Profile() {
   const [companyPhone, setCompanyPhone] = useState(user?.companyPhone || '');
   const [companyAddress, setCompanyAddress] = useState(user?.companyAddress || '');
   const [bankAddress, setBankAddress] = useState(user?.bankAddress || '');
+  const [companyLogo, setCompanyLogo] = useState<string | null>(user?.companyLogo || null);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'success' | 'error'>('idle');
@@ -33,8 +35,19 @@ export default function Profile() {
       setCompanyPhone(user.companyPhone || '');
       setCompanyAddress(user.companyAddress || '');
       setBankAddress(user.bankAddress || '');
+      setCompanyLogo(user.companyLogo || null);
     }
   }, [user]);
+
+  const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onloadend = () => setCompanyLogo(reader.result as string);
+    reader.readAsDataURL(file);
+    // Allow re-selecting the same file later.
+    e.target.value = '';
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -47,7 +60,7 @@ export default function Profile() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           firstName, lastName, username, preferredCurrency,
-          companyName, companyEmail, companyPhone, companyAddress, bankAddress
+          companyName, companyEmail, companyPhone, companyAddress, bankAddress, companyLogo
         }),
       });
       const data = await res.json();
@@ -69,16 +82,18 @@ export default function Profile() {
 
   return (
     <div className="min-h-screen bg-[#f5f5f4] text-gray-900 font-sans">
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-20">
+      <header className="bg-white/95 backdrop-blur border-b border-gray-200 sticky top-0 z-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
           <div className="flex shrink-0 items-center gap-3">
-            <Link to="/dashboard" className="flex h-9 w-9 items-center justify-center rounded-full border border-gray-200 bg-gray-50 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900">
+            <Link
+              to="/dashboard"
+              title="Volver al panel"
+              className="flex h-9 w-9 items-center justify-center rounded-full border border-gray-200 bg-gray-50 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900"
+            >
               <ArrowLeft size={20} />
             </Link>
             <div className="flex items-center gap-2 border-l border-gray-200 pl-3">
-              <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white">
-                <FileText size={20} />
-              </div>
+              <Logo variant="iso" className="h-8 w-8 object-contain" />
               <span className="font-semibold text-lg tracking-tight">{t('nav.profile')}</span>
             </div>
           </div>
@@ -221,6 +236,38 @@ export default function Profile() {
                     <label htmlFor="companyAddress" className="block text-sm font-medium text-gray-700">{t('form.address')}</label>
                     <div className="mt-1">
                       <input type="text" id="companyAddress" value={companyAddress} onChange={(e) => setCompanyAddress(e.target.value)} className="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md py-2 px-3 border" />
+                    </div>
+                  </div>
+                  <div className="sm:col-span-6">
+                    <label className="block text-sm font-medium text-gray-700">{t('profile.companyLogo')}</label>
+                    <p className="mt-1 text-sm text-gray-500">{t('profile.companyLogoHint')}</p>
+                    <div className="mt-2 flex items-center gap-4">
+                      {companyLogo ? (
+                        <div className="flex h-20 w-32 items-center justify-center rounded-lg border border-gray-200 bg-gray-50 p-2">
+                          <img src={companyLogo} alt={t('profile.companyLogo')} className="max-h-full max-w-full object-contain" />
+                        </div>
+                      ) : (
+                        <div className="flex h-20 w-32 items-center justify-center rounded-lg border-2 border-dashed border-gray-300 bg-gray-50 text-gray-400">
+                          <ImageIcon size={24} />
+                        </div>
+                      )}
+                      <div className="flex flex-col gap-2">
+                        <label className="inline-flex cursor-pointer items-center gap-2 rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50">
+                          <ImageIcon size={16} />
+                          {companyLogo ? t('profile.changeLogo') : t('profile.uploadLogo')}
+                          <input type="file" className="hidden" accept="image/png,image/jpeg,image/gif,image/webp" onChange={handleLogoChange} />
+                        </label>
+                        {companyLogo && (
+                          <button
+                            type="button"
+                            onClick={() => setCompanyLogo(null)}
+                            className="inline-flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50"
+                          >
+                            <Trash2 size={16} />
+                            {t('profile.removeLogo')}
+                          </button>
+                        )}
+                      </div>
                     </div>
                   </div>
                   <div className="sm:col-span-6">

@@ -71,10 +71,15 @@ async function migrate() {
 
     try {
       await remoteDb.execute({
-        sql: `INSERT INTO invoices (id, userId, title, data, layout, settings, createdAt, updatedAt)
-              VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        sql: `INSERT INTO invoices (id, userId, title, invoiceNumber, status, data, layout, settings, publishedAt, createdAt, updatedAt)
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         args: [
-          row.id, remoteUserId, row.title, row.data, row.layout, row.settings, row.createdAt, row.updatedAt
+          row.id, remoteUserId, row.title,
+          row.invoiceNumber ?? null,
+          row.status ?? 'draft',
+          row.data, row.layout, row.settings,
+          row.publishedAt ?? null,
+          row.createdAt, row.updatedAt
         ]
       });
       console.log(`✅ Migrada factura ${row.title}`);

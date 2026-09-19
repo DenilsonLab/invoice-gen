@@ -2,6 +2,7 @@ import React, { lazy, Suspense, useEffect, useState } from 'react';
 import { InvoiceData, InvoiceItem, SavedClient } from '../types';
 import { CheckCircle2, Pencil, Plus, Save, Trash2, UserPlus } from 'lucide-react';
 import { useBuilder } from '../context/BuilderContext';
+import { useDialog } from '../context/DialogContext';
 import { useTranslation } from 'react-i18next';
 import 'react-quill-new/dist/quill.snow.css';
 
@@ -15,6 +16,7 @@ interface InvoiceFormProps {
 export default function InvoiceForm({ data, onChange }: InvoiceFormProps) {
   const { t } = useTranslation();
   const { layout } = useBuilder();
+  const { confirm } = useDialog();
   const [clients, setClients] = useState<SavedClient[]>([]);
   const [selectedClientId, setSelectedClientId] = useState('');
   const [clientFeedback, setClientFeedback] = useState('');
@@ -108,7 +110,13 @@ export default function InvoiceForm({ data, onChange }: InvoiceFormProps) {
   };
 
   const deleteClient = async (clientId: string) => {
-    if (!confirm(t('clients.deleteConfirm'))) return;
+    const ok = await confirm({
+      title: t('clients.deleteTitle'),
+      message: t('clients.deleteConfirm'),
+      confirmLabel: t('common.delete'),
+      danger: true,
+    });
+    if (!ok) return;
 
     try {
       const res = await fetch(`/api/clients/${clientId}`, { method: 'DELETE' });

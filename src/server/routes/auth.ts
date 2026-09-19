@@ -4,19 +4,30 @@ import jwt from 'jsonwebtoken';
 import db from '../db.js';
 import { v4 as uuidv4 } from 'uuid';
 import { randomBytes } from 'crypto';
-import { loginSchema, parseBody, registerSchema } from '../validation.js';
+import { googleTokenSchema, googleUserInfoSchema, loginSchema, parseBody, registerSchema } from '../validation.js';
+import { logError } from '../logger.js';
+import { JWT_SECRET, isProduction } from '../config.js';
+import { rateLimit } from '../middleware/rateLimit.js';
+import { resolveImageRef } from '../images.js';
 
 const router = express.Router();
-const JWT_SECRET = process.env.JWT_SECRET || (process.env.NODE_ENV === 'production' ? undefined : 'super-secret-key-for-dev');
 
-if (!JWT_SECRET) {
-  throw new Error('JWT_SECRET is required in production');
-}
+// How long the auth session lasts. Kept in sync with the JWT's expiresIn so the
+// cookie and the token expire together (previously the cookie had no maxAge, so
+// it was a session cookie that died when the browser closed).
+const TOKEN_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
 const authCookieOptions = {
   httpOnly: true,
-  secure: process.env.NODE_ENV === 'production',
+  secure: isProduction,
   sameSite: 'lax' as const,
+};
+
+// Options for setting the auth cookie (adds the lifetime). clearCookie uses the
+// base options above so the cookie attributes match on removal.
+const authCookieSetOptions = {
+  ...authCookieOptions,
+  maxAge: TOKEN_MAX_AGE_MS,
 };
 
 const oauthStateCookieOptions = {
@@ -33,26 +44,6 @@ const getAppUrl = () => {
 const createUsernameFromEmail = (email: string) => {
   const base = email.split('@')[0].replace(/[^a-zA-Z0-9_-]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '') || 'user';
   return `${base}${Math.floor(Math.random() * 1000)}`;
-};
-
-const rateLimitBuckets = new Map<string, { count: number; resetAt: number }>();
-
-const rateLimit = (name: string, maxAttempts: number, windowMs: number) => (req: any, res: any, next: any) => {
-  const now = Date.now();
-  const key = `${name}:${req.ip}:${req.body?.email || ''}`;
-  const bucket = rateLimitBuckets.get(key);
-
-  if (!bucket || bucket.resetAt <= now) {
-    rateLimitBuckets.set(key, { count: 1, resetAt: now + windowMs });
-    return next();
-  }
-
-  if (bucket.count >= maxAttempts) {
-    return res.status(429).json({ error: 'Too many attempts. Please try again later.' });
-  }
-
-  bucket.count += 1;
-  next();
 };
 
 // Register
@@ -81,9 +72,10 @@ router.post('/register', rateLimit('register', 5, 15 * 60 * 1000), async (req, r
     });
 
     const token = jwt.sign({ id }, JWT_SECRET, { expiresIn: '7d' });
-    res.cookie('token', token, authCookieOptions);
+    res.cookie('token', token, authCookieSetOptions);
     res.json({ id, email, firstName, lastName, username });
   } catch (error) {
+    logError('POST /api/auth/register', error);
     res.status(500).json({ error: 'Server error' });
   }
 });
@@ -107,7 +99,7 @@ router.post('/login', rateLimit('login', 10, 15 * 60 * 1000), async (req, res) =
     }
 
     const token = jwt.sign({ id: user.id }, JWT_SECRET, { expiresIn: '7d' });
-    res.cookie('token', token, authCookieOptions);
+    res.cookie('token', token, authCookieSetOptions);
     res.json({
       id: user.id,
       email: user.email,
@@ -119,9 +111,11 @@ router.post('/login', rateLimit('login', 10, 15 * 60 * 1000), async (req, res) =
       companyEmail: user.companyEmail,
       companyPhone: user.companyPhone,
       companyAddress: user.companyAddress,
-      bankAddress: user.bankAddress
+      bankAddress: user.bankAddress,
+      companyLogo: await resolveImageRef(user.id as string, user.companyLogo as string | null)
     });
   } catch (error) {
+    logError('POST /api/auth/login', error);
     res.status(500).json({ error: 'Server error' });
   }
 });
@@ -140,14 +134,17 @@ router.get('/me', async (req, res) => {
   try {
     const decoded = jwt.verify(token, JWT_SECRET) as any;
     const resDb = await db.execute({
-      sql: 'SELECT id, email, firstName, lastName, username, preferredCurrency, companyName, companyEmail, companyPhone, companyAddress, bankAddress FROM users WHERE id = ?',
+      sql: 'SELECT id, email, firstName, lastName, username, preferredCurrency, companyName, companyEmail, companyPhone, companyAddress, bankAddress, companyLogo FROM users WHERE id = ?',
       args: [decoded.id]
     });
-    const user = resDb.rows[0];
-    if (!user) return res.status(401).json({ error: 'User not found' });
+    const row = resDb.rows[0];
+    if (!row) return res.status(401).json({ error: 'User not found' });
 
     // ensure standard object without complex libsql wrappers
-    res.json(Object.assign({}, user));
+    const user = Object.assign({}, row) as any;
+    // Rehydrate the stored-image reference back to a data URI for the client.
+    user.companyLogo = await resolveImageRef(user.id as string, user.companyLogo);
+    res.json(user);
   } catch (error) {
     res.status(401).json({ error: 'Invalid token' });
   }
@@ -198,14 +195,34 @@ router.get('/google/callback', async (req, res) => {
       })
     });
 
-    const tokenData = await tokenResponse.json();
+    if (!tokenResponse.ok) {
+      console.error('Google token exchange failed:', tokenResponse.status);
+      return res.status(502).send('Authentication failed');
+    }
+
+    const tokenParsed = googleTokenSchema.safeParse(await tokenResponse.json());
+    if (!tokenParsed.success) {
+      console.error('Unexpected Google token response shape');
+      return res.status(502).send('Authentication failed');
+    }
 
     // Get user info
     const userResponse = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
-      headers: { Authorization: `Bearer ${tokenData.access_token}` }
+      headers: { Authorization: `Bearer ${tokenParsed.data.access_token}` }
     });
 
-    const userData = await userResponse.json();
+    if (!userResponse.ok) {
+      console.error('Google userinfo request failed:', userResponse.status);
+      return res.status(502).send('Authentication failed');
+    }
+
+    const userParsed = googleUserInfoSchema.safeParse(await userResponse.json());
+    if (!userParsed.success) {
+      console.error('Unexpected Google userinfo response shape');
+      return res.status(502).send('Authentication failed');
+    }
+
+    const userData = userParsed.data;
 
     // Check if user exists
     const resDb = await db.execute({
@@ -237,15 +254,24 @@ router.get('/google/callback', async (req, res) => {
     }
 
     const token = jwt.sign({ id: user.id }, JWT_SECRET, { expiresIn: '7d' });
-    res.cookie('token', token, authCookieOptions);
+    res.cookie('token', token, authCookieSetOptions);
+
+    // This response contains an inline <script>. Serve it with its own strict
+    // CSP that only allows that specific script via a per-response nonce,
+    // overriding the app-wide policy set by helmet.
+    const nonce = randomBytes(16).toString('base64');
+    res.setHeader(
+      'Content-Security-Policy',
+      `default-src 'none'; script-src 'nonce-${nonce}'; base-uri 'none'`
+    );
 
     // Send success message to parent window
     res.send(`
       <html>
         <body>
-          <script>
+          <script nonce="${nonce}">
             if (window.opener) {
-              window.opener.postMessage({ type: 'OAUTH_AUTH_SUCCESS' }, '${appUrl}');
+              window.opener.postMessage({ type: 'OAUTH_AUTH_SUCCESS' }, ${JSON.stringify(appUrl)});
               window.close();
             } else {
               window.location.href = '/';
@@ -256,7 +282,7 @@ router.get('/google/callback', async (req, res) => {
       </html>
     `);
   } catch (error) {
-    console.error('Google Auth Error:', error);
+    logError('GET /api/auth/google/callback', error);
     res.status(500).send('Authentication failed');
   }
 });

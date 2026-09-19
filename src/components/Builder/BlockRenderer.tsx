@@ -207,7 +207,7 @@ export default function BlockRenderer({ block }: BlockRendererProps) {
         <div className="mb-6">
           <h4 className="font-medium text-gray-900 mb-1 text-sm pt-4 border-t border-gray-100">{t('form.bankDetails')}</h4>
           <div
-            className="prose prose-sm max-w-none text-gray-500"
+            className="prose prose-sm max-w-none text-gray-500 whitespace-pre-line"
             dangerouslySetInnerHTML={{ __html: sanitizeHtml(bankContent) }}
           />
         </div>

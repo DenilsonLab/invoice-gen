@@ -1,29 +1,13 @@
 import express from 'express';
-import jwt from 'jsonwebtoken';
 import { randomUUID } from 'crypto';
 import db from '../db.js';
 import { clientSchema, parseBody } from '../validation.js';
+import { logError } from '../logger.js';
+import { authenticate, type AuthedRequest } from '../middleware/auth.js';
 
 const router = express.Router();
-const JWT_SECRET = process.env.JWT_SECRET || (process.env.NODE_ENV === 'production' ? undefined : 'super-secret-key-for-dev');
 
-if (!JWT_SECRET) {
-  throw new Error('JWT_SECRET is required in production');
-}
-
-const authenticate = (req: any, res: any, next: any) => {
-  const token = req.cookies.token;
-  if (!token) return res.status(401).json({ error: 'Not authenticated' });
-
-  try {
-    req.user = jwt.verify(token, JWT_SECRET) as any;
-    next();
-  } catch (error) {
-    res.status(401).json({ error: 'Invalid token' });
-  }
-};
-
-router.get('/', authenticate, async (req: any, res) => {
+router.get('/', authenticate, async (req: AuthedRequest, res) => {
   try {
     const result = await db.execute({
       sql: 'SELECT id, name, email, phone, address, createdAt, updatedAt FROM clients WHERE userId = ? ORDER BY name COLLATE NOCASE ASC',
@@ -32,11 +16,12 @@ router.get('/', authenticate, async (req: any, res) => {
 
     res.json(result.rows.map((row) => Object.assign({}, row)));
   } catch (error) {
+    logError('GET /api/clients', error);
     res.status(500).json({ error: 'Server error' });
   }
 });
 
-router.post('/', authenticate, async (req: any, res) => {
+router.post('/', authenticate, async (req: AuthedRequest, res) => {
   const parsed = parseBody(clientSchema, req.body);
   if (parsed.error) return res.status(400).json({ error: parsed.error });
 
@@ -56,11 +41,12 @@ router.post('/', authenticate, async (req: any, res) => {
 
     res.status(201).json(Object.assign({}, result.rows[0]));
   } catch (error) {
+    logError('POST /api/clients', error);
     res.status(500).json({ error: 'Server error' });
   }
 });
 
-router.put('/:id', authenticate, async (req: any, res) => {
+router.put('/:id', authenticate, async (req: AuthedRequest, res) => {
   const parsed = parseBody(clientSchema, req.body);
   if (parsed.error) return res.status(400).json({ error: parsed.error });
 
@@ -82,15 +68,17 @@ router.put('/:id', authenticate, async (req: any, res) => {
 
     res.json(Object.assign({}, result.rows[0]));
   } catch (error) {
+    logError('PUT /api/clients/:id', error);
     res.status(500).json({ error: 'Server error' });
   }
 });
 
-router.delete('/:id', authenticate, async (req: any, res) => {
+router.delete('/:id', authenticate, async (req: AuthedRequest, res) => {
   try {
     await db.execute({ sql: 'DELETE FROM clients WHERE id = ? AND userId = ?', args: [req.params.id, req.user.id] });
     res.json({ ok: true });
   } catch (error) {
+    logError('DELETE /api/clients/:id', error);
     res.status(500).json({ error: 'Server error' });
   }
 });

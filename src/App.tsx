@@ -2,12 +2,14 @@ import React, { lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { BuilderProvider, useBuilder } from './context/BuilderContext';
+import { DialogProvider } from './context/DialogContext';
 import Builder from './components/Builder/Builder';
 import HeaderActions from './components/Builder/HeaderActions';
-import { FileText, ArrowLeft } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import LanguageSwitcher from './components/LanguageSwitcher';
+import Logo from './components/Logo';
 
 // Lazy load heavy components
 const Login = lazy(() => import('./pages/Login'));
@@ -17,19 +19,18 @@ const Profile = lazy(() => import('./pages/Profile'));
 const PublicInvoice = lazy(() => import('./pages/PublicInvoice'));
 
 const LoadingFallback = () => (
-  <div className="min-h-screen flex items-center justify-center">
-    <div className="text-center">
-      <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white mx-auto mb-2">
-        <FileText size={20} />
-      </div>
-      <p className="text-gray-600">Cargando...</p>
+  <div className="min-h-screen flex flex-col items-center justify-center gap-6 bg-white">
+    <Logo variant="full" className="h-16 w-auto object-contain animate-pulse" />
+    <div className="flex items-center gap-2 text-gray-500">
+      <span className="h-4 w-4 animate-spin rounded-full border-2 border-blue-200 border-t-blue-600" />
+      <span className="text-sm font-medium">Cargando...</span>
     </div>
   </div>
 );
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
-  if (loading) return <div className="min-h-screen flex items-center justify-center">Cargando...</div>;
+  if (loading) return <LoadingFallback />;
   return user ? <>{children}</> : <Navigate to="/login" />;
 }
 
@@ -57,18 +58,20 @@ function BuilderLayout() {
     <BuilderProvider>
       <div className="min-h-screen bg-[#f5f5f4] text-gray-900 font-sans selection:bg-blue-200 flex flex-col">
         {/* Top Navigation - Hidden when printing */}
-        <header className="bg-white border-b border-gray-200 sticky top-0 z-20 print:hidden flex-shrink-0">
+        <header className="bg-white/95 backdrop-blur border-b border-gray-200 sticky top-0 z-20 print:hidden flex-shrink-0">
           <div className="max-w-[1600px] mx-auto px-4 h-16 flex items-center justify-between gap-4">
             <div className="flex shrink-0 items-center gap-3">
-              <Link to="/dashboard" className="flex h-9 w-9 items-center justify-center rounded-full border border-gray-200 bg-gray-50 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900">
+              <Link
+                to="/dashboard"
+                title="Volver al panel"
+                className="flex h-9 w-9 items-center justify-center rounded-full border border-gray-200 bg-gray-50 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900"
+              >
                 <ArrowLeft size={20} />
               </Link>
-              <div className="flex items-center gap-2 border-l border-gray-200 pl-3">
-                <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white">
-                  <FileText size={20} />
-                </div>
+              <Link to="/dashboard" className="flex items-center gap-2 border-l border-gray-200 pl-3">
+                <Logo variant="iso" className="h-8 w-8 object-contain" />
                 <span className="hidden font-semibold tracking-tight text-gray-900 sm:inline">InvoiceGen Pro</span>
-              </div>
+              </Link>
             </div>
             
             <div className="flex min-w-0 flex-1 items-center justify-end gap-3">
@@ -93,9 +96,10 @@ function BuilderLayout() {
 export default function App() {
   return (
     <AuthProvider>
-      <Router>
-        <Suspense fallback={<LoadingFallback />}>
-          <Routes>
+      <DialogProvider>
+        <Router>
+          <Suspense fallback={<LoadingFallback />}>
+            <Routes>
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
@@ -104,9 +108,10 @@ export default function App() {
             <Route path="/builder/:id" element={<PrivateRoute><BuilderLayout /></PrivateRoute>} />
             <Route path="/:username/:invoiceId" element={<PublicInvoice />} />
             <Route path="/" element={<Navigate to="/dashboard" />} />
-          </Routes>
-        </Suspense>
-      </Router>
+            </Routes>
+          </Suspense>
+        </Router>
+      </DialogProvider>
     </AuthProvider>
   );
 }

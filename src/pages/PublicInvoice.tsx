@@ -3,11 +3,13 @@ import { useParams } from 'react-router-dom';
 import { Download, FileText } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { StaticBuilderProvider } from '../context/BuilderContext';
+import { useDialog } from '../context/DialogContext';
 import BlockRenderer from '../components/Builder/BlockRenderer';
 import { SavedInvoice } from '../types';
 
 export default function PublicInvoice() {
   const { t } = useTranslation();
+  const { notify } = useDialog();
   const { username, invoiceId } = useParams();
   const [invoice, setInvoice] = useState<SavedInvoice | null>(null);
   const [loading, setLoading] = useState(true);
@@ -50,7 +52,7 @@ export default function PublicInvoice() {
       await generatePdf(invoice.data);
     } catch (error) {
       console.error('Error generating public invoice PDF:', error);
-      alert(t('builder.actions.pdfError'));
+      notify({ type: 'error', message: t('builder.actions.pdfError') });
     } finally {
       setIsDownloading(false);
     }

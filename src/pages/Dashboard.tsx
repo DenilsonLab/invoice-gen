@@ -1,13 +1,16 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useDialog } from '../context/DialogContext';
 import { FileText, Plus, LogOut, User as UserIcon, Trash2, Edit } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import LanguageSwitcher from '../components/LanguageSwitcher';
+import Logo from '../components/Logo';
 
 export default function Dashboard() {
   const { t } = useTranslation();
   const { user, logout } = useAuth();
+  const { confirm, notify } = useDialog();
   const [invoices, setInvoices] = useState<any[]>([]);
   const [loadingInvoices, setLoadingInvoices] = useState(true);
   const navigate = useNavigate();
@@ -32,14 +35,23 @@ export default function Dashboard() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm(t('dashboard.deleteConfirm'))) return;
+    const ok = await confirm({
+      title: t('dashboard.deleteTitle'),
+      message: t('dashboard.deleteConfirm'),
+      confirmLabel: t('common.delete'),
+      danger: true,
+    });
+    if (!ok) return;
     try {
       const res = await fetch(`/api/invoices/${id}`, { method: 'DELETE' });
       if (res.ok) {
         fetchInvoices();
+      } else {
+        notify({ type: 'error', message: t('dashboard.deleteError') });
       }
     } catch (error) {
       console.error('Failed to delete invoice', error);
+      notify({ type: 'error', message: t('dashboard.deleteError') });
     }
   };
 
@@ -50,14 +62,12 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-[#f5f5f4] text-gray-900 font-sans">
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-20">
+      <header className="bg-white/95 backdrop-blur border-b border-gray-200 sticky top-0 z-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
-          <div className="flex shrink-0 items-center gap-2">
-            <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white">
-              <FileText size={20} />
-            </div>
+          <Link to="/dashboard" className="flex shrink-0 items-center gap-2.5">
+            <Logo variant="iso" className="h-9 w-9 object-contain" />
             <span className="font-semibold text-lg tracking-tight">InvoiceGen Pro</span>
-          </div>
+          </Link>
            
           <div className="flex items-center gap-2">
             <div className="flex items-center gap-1 rounded-xl border border-gray-200 bg-gray-50 p-1 shadow-sm">

@@ -12,6 +12,7 @@ interface User {
   companyPhone?: string;
   companyAddress?: string;
   bankAddress?: string;
+  companyLogo?: string | null;
 }
 
 interface AuthContextType {

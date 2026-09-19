@@ -3,6 +3,72 @@ import { InvoiceData, InvoiceBlock, InvoiceSettings } from '../types';
 import { formatCurrency, formatDate } from './formatters';
 import i18n from '../i18n';
 
+// docx only supports these raster formats for embedding. SVG needs a fallback
+// image, which we don't have, so it is excluded and rendered as a placeholder.
+type DocxImageType = 'png' | 'jpg' | 'gif' | 'bmp';
+
+const MIME_TO_DOCX_TYPE: Record<string, DocxImageType> = {
+  'image/png': 'png',
+  'image/jpeg': 'jpg',
+  'image/jpg': 'jpg',
+  'image/gif': 'gif',
+  'image/bmp': 'bmp',
+};
+
+// Max logo size inside the document, in points (docx transformation units).
+const MAX_LOGO_WIDTH = 160;
+const MAX_LOGO_HEIGHT = 80;
+
+/** Parse a `data:image/...;base64,...` URI into its docx type and raw bytes. */
+const parseImageDataUrl = (dataUrl: string): { type: DocxImageType; bytes: Uint8Array } | null => {
+  const match = /^data:([^;,]+)(;base64)?,(.*)$/s.exec(dataUrl);
+  if (!match) return null;
+
+  const [, mime, isBase64, payload] = match;
+  const docxType = MIME_TO_DOCX_TYPE[mime.toLowerCase()];
+  if (!docxType || !isBase64) return null;
+
+  try {
+    const binary = atob(payload);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    return { type: docxType, bytes };
+  } catch {
+    return null;
+  }
+};
+
+/** Load the image to get its natural dimensions, then scale to fit the logo box. */
+const getScaledLogoSize = (dataUrl: string): Promise<{ width: number; height: number }> =>
+  new Promise((resolve) => {
+    const fallback = { width: MAX_LOGO_WIDTH, height: MAX_LOGO_HEIGHT };
+    const img = new Image();
+    img.onload = () => {
+      const { naturalWidth: w, naturalHeight: h } = img;
+      if (!w || !h) return resolve(fallback);
+      const ratio = Math.min(MAX_LOGO_WIDTH / w, MAX_LOGO_HEIGHT / h, 1);
+      resolve({ width: Math.round(w * ratio), height: Math.round(h * ratio) });
+    };
+    img.onerror = () => resolve(fallback);
+    img.src = dataUrl;
+  });
+
+interface DecodedLogo {
+  type: DocxImageType;
+  bytes: Uint8Array;
+  width: number;
+  height: number;
+}
+
+/** Decode a logo data URI into embeddable bytes + scaled size, or null. */
+const buildLogoImage = async (logoUrl: string): Promise<DecodedLogo | null> => {
+  const parsed = parseImageDataUrl(logoUrl);
+  if (!parsed) return null;
+
+  const { width, height } = await getScaledLogoSize(logoUrl);
+  return { type: parsed.type, bytes: parsed.bytes, width, height };
+};
+
 export const generateDocx = async (data: InvoiceData, layout: InvoiceBlock[], settings: InvoiceSettings) => {
   // Lazy load docx library only when needed (reduces initial bundle by ~1MB)
   const docxModule = await import('docx');
@@ -34,6 +100,26 @@ export const generateDocx = async (data: InvoiceData, layout: InvoiceBlock[], se
 
   const createSpacer = () => new Paragraph({ text: "", spacing: { before: 200, after: 200 } });
 
+  // Build a paragraph from plain text, turning newlines into real line breaks.
+  // docx ignores "\n" inside a paragraph's text, so each line becomes a TextRun
+  // and subsequent lines get a leading break.
+  const paragraphFromText = (text: string, options: Record<string, any> = {}) => {
+    const lines = text.split('\n');
+    const runs = lines.map((line, i) =>
+      new TextRun(i === 0 ? { text: line } : { text: line, break: 1 })
+    );
+    return new Paragraph({ children: runs, ...options });
+  };
+
+  // Decode the logo once. A fresh ImageRun instance must be created per usage
+  // (docx does not allow reusing the same run in multiple places), so we cache
+  // the decoded bytes/size and expose a factory.
+  const logoImage = settings.logoUrl ? await buildLogoImage(settings.logoUrl) : null;
+  const makeLogoRun = () =>
+    logoImage
+      ? new ImageRun({ type: logoImage.type, data: logoImage.bytes, transformation: { width: logoImage.width, height: logoImage.height } })
+      : null;
+
   for (const block of layout) {
     switch (block.type) {
       case 'header-split':
@@ -48,9 +134,16 @@ export const generateDocx = async (data: InvoiceData, layout: InvoiceBlock[], se
                     width: { size: 50, type: WidthType.PERCENTAGE },
                     borders: noBorders,
                     children: [
-                      new Paragraph({
-                        children: [new TextRun({ text: data.companyName || t('invoice.defaultCompanyName'), bold: true, size: 36, color: settings.brandColor.replace('#', '') })],
-                      }),
+                      // Match the on-screen renderer: show the logo instead of
+                      // the company name when a logo is set.
+                      (() => {
+                        const logoRun = makeLogoRun();
+                        return logoRun
+                          ? new Paragraph({ children: [logoRun] })
+                          : new Paragraph({
+                              children: [new TextRun({ text: data.companyName || t('invoice.defaultCompanyName'), bold: true, size: 36, color: settings.brandColor.replace('#', '') })],
+                            });
+                      })(),
                       new Paragraph({ text: data.companyAddress || '', spacing: { before: 100 } }),
                       new Paragraph({ text: data.companyEmail || '' }),
                       new Paragraph({ text: data.companyPhone || '' }),
@@ -250,7 +343,7 @@ export const generateDocx = async (data: InvoiceData, layout: InvoiceBlock[], se
         if (notesText) {
           children.push(
             new Paragraph({ children: [new TextRun({ text: t('form.additionalNotes'), bold: true })], spacing: { before: 200, after: 100 } }),
-            new Paragraph({ text: notesText })
+            paragraphFromText(notesText)
           );
         }
         break;
@@ -261,7 +354,7 @@ export const generateDocx = async (data: InvoiceData, layout: InvoiceBlock[], se
         if (termsText) {
           children.push(
             new Paragraph({ children: [new TextRun({ text: t('form.terms'), bold: true })], spacing: { before: 200, after: 100 } }),
-            new Paragraph({ text: termsText })
+            paragraphFromText(termsText)
           );
         }
         break;
@@ -272,7 +365,7 @@ export const generateDocx = async (data: InvoiceData, layout: InvoiceBlock[], se
         if (bankText) {
           children.push(
             new Paragraph({ children: [new TextRun({ text: t('form.bankDetails'), bold: true })], spacing: { before: 200, after: 100 } }),
-            new Paragraph({ text: bankText })
+            paragraphFromText(bankText)
           );
         }
         break;
@@ -294,18 +387,28 @@ export const generateDocx = async (data: InvoiceData, layout: InvoiceBlock[], se
       case 'custom-text':
         const customText = stripHtml(block.content || '');
         if (customText) {
-          children.push(new Paragraph({ text: customText, spacing: { before: 100, after: 100 } }));
+          children.push(paragraphFromText(customText, { spacing: { before: 100, after: 100 } }));
         }
         break;
 
-      case 'logo':
-        // Note: docx image embedding requires arraybuffer or base64. 
-        // For simplicity, we just put a placeholder text if there's a logo, 
-        // as parsing base64 to buffer for docx is complex.
-        if (settings.logoUrl) {
-          children.push(new Paragraph({ text: `[${i18n.t('invoice.logoPlaceholder')}]`, alignment: AlignmentType.CENTER, spacing: { before: 200, after: 200 } }));
-        }
+      case 'logo': {
+        if (!settings.logoUrl) break;
+
+        const embedded = makeLogoRun();
+        children.push(
+          new Paragraph({
+            alignment: AlignmentType.CENTER,
+            spacing: { before: 200, after: 200 },
+            // Fall back to a text placeholder when the logo can't be embedded
+            // (e.g. SVG, which docx requires a raster fallback for, or a
+            // malformed data URI).
+            children: [
+              embedded ?? new TextRun({ text: `[${t('invoice.logoPlaceholder')}]` }),
+            ],
+          })
+        );
         break;
+      }
     }
   }
 

@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { InvoiceData, InvoiceBlock, InvoiceSettings, InvoiceStatus } from '../types';
 import { initialInvoiceData, initialLayout, initialSettings } from '../constants';
 import { useAuth } from './AuthContext';
+import { useDialog } from './DialogContext';
 import { useTranslation } from 'react-i18next';
 
 interface BuilderContextType {
@@ -29,6 +30,7 @@ export function BuilderProvider({ children }: { children: React.ReactNode }) {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { notify } = useDialog();
   const [data, setData] = useState<InvoiceData>(initialInvoiceData);
   const [layout, setLayout] = useState<InvoiceBlock[]>(initialLayout);
   const [settings, setSettings] = useState<InvoiceSettings>(initialSettings);
@@ -61,18 +63,18 @@ export function BuilderProvider({ children }: { children: React.ReactNode }) {
           setSettings(invoice.settings);
           setIsReady(true);
         } else {
-          alert(t('builder.actions.loadError'));
+          notify({ type: 'error', message: t('builder.actions.loadError') });
           navigate('/dashboard');
         }
       } catch (error) {
         console.error('Failed to load invoice', error);
-        alert(t('builder.actions.loadError'));
+        notify({ type: 'error', message: t('builder.actions.loadError') });
         navigate('/dashboard');
       }
     };
 
     loadInvoice();
-  }, [id, navigate, t]);
+  }, [id, navigate, t, notify]);
 
   useEffect(() => {
     if (!id && user) {
@@ -99,6 +101,10 @@ export function BuilderProvider({ children }: { children: React.ReactNode }) {
             issueDate: new Date().toISOString().split('T')[0],
             dueDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
           }));
+          // Pre-fill the invoice logo with the company logo saved in the profile.
+          if (user.companyLogo) {
+            setSettings(prev => ({ ...prev, logoUrl: user.companyLogo as string }));
+          }
           setIsReady(true);
         } catch (error) {
           console.error('Failed to fetch initial data', error);

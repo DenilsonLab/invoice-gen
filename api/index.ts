@@ -1,5 +1,6 @@
 import express from 'express';
 import cookieParser from 'cookie-parser';
+import { securityHeaders } from '../src/server/security.js';
 import authRoutes from '../src/server/routes/auth.js';
 import userRoutes from '../src/server/routes/users.js';
 import invoiceRoutes from '../src/server/routes/invoices.js';
@@ -7,6 +8,7 @@ import clientRoutes from '../src/server/routes/clients.js';
 
 const app = express();
 
+app.use(securityHeaders);
 app.use(express.json({ limit: '5mb' }));
 app.use(express.urlencoded({ limit: '5mb', extended: true }));
 app.use(cookieParser());

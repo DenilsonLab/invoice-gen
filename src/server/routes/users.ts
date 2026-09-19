@@ -1,55 +1,20 @@
 import express from 'express';
+import bcrypt from 'bcryptjs';
 import db from '../db.js';
-import jwt from 'jsonwebtoken';
 import { parseBody, passwordSchema, profileSchema } from '../validation.js';
+import { logError } from '../logger.js';
+import { authenticate, type AuthedRequest } from '../middleware/auth.js';
+import { rateLimit } from '../middleware/rateLimit.js';
+import { storeImage, resolveImageRef } from '../images.js';
 
 const router = express.Router();
-const JWT_SECRET = process.env.JWT_SECRET || (process.env.NODE_ENV === 'production' ? undefined : 'super-secret-key-for-dev');
-
-if (!JWT_SECRET) {
-  throw new Error('JWT_SECRET is required in production');
-}
-
-const rateLimitBuckets = new Map<string, { count: number; resetAt: number }>();
-
-const rateLimit = (name: string, maxAttempts: number, windowMs: number) => (req: any, res: any, next: any) => {
-  const now = Date.now();
-  const key = `${name}:${req.ip}:${req.user?.id || ''}`;
-  const bucket = rateLimitBuckets.get(key);
-
-  if (!bucket || bucket.resetAt <= now) {
-    rateLimitBuckets.set(key, { count: 1, resetAt: now + windowMs });
-    return next();
-  }
-
-  if (bucket.count >= maxAttempts) {
-    return res.status(429).json({ error: 'Too many attempts. Please try again later.' });
-  }
-
-  bucket.count += 1;
-  next();
-};
-
-// Middleware to verify token
-const authenticate = (req: any, res: any, next: any) => {
-  const token = req.cookies.token;
-  if (!token) return res.status(401).json({ error: 'Not authenticated' });
-
-  try {
-    const decoded = jwt.verify(token, JWT_SECRET) as any;
-    req.user = decoded;
-    next();
-  } catch (error) {
-    res.status(401).json({ error: 'Invalid token' });
-  }
-};
 
 // Update profile
-router.put('/profile', authenticate, async (req: any, res: any) => {
+router.put('/profile', authenticate, async (req: AuthedRequest, res) => {
   const parsed = parseBody(profileSchema, req.body);
   if (parsed.error) return res.status(400).json({ error: parsed.error });
 
-  const { firstName, lastName, username, preferredCurrency, companyName, companyEmail, companyPhone, companyAddress, bankAddress } = parsed.data;
+  const { firstName, lastName, username, preferredCurrency, companyName, companyEmail, companyPhone, companyAddress, bankAddress, companyLogo } = parsed.data;
   const userId = req.user.id;
 
   try {
@@ -60,28 +25,34 @@ router.put('/profile', authenticate, async (req: any, res: any) => {
       return res.status(400).json({ error: 'Username already taken' });
     }
 
+    // Deduplicate the logo into the image store; persist only a short reference.
+    const logoRef = await storeImage(userId, companyLogo);
+
     await db.execute({
       sql: `
         UPDATE users 
-        SET firstName = ?, lastName = ?, username = ?, preferredCurrency = ?, companyName = ?, companyEmail = ?, companyPhone = ?, companyAddress = ?, bankAddress = ?
+        SET firstName = ?, lastName = ?, username = ?, preferredCurrency = ?, companyName = ?, companyEmail = ?, companyPhone = ?, companyAddress = ?, bankAddress = ?, companyLogo = ?
         WHERE id = ?
       `,
-      args: [firstName, lastName, username, preferredCurrency, companyName, companyEmail, companyPhone, companyAddress, bankAddress, userId]
+      args: [firstName, lastName, username, preferredCurrency, companyName, companyEmail, companyPhone, companyAddress, bankAddress, logoRef, userId]
     });
 
     const resUser = await db.execute({
-      sql: 'SELECT id, email, firstName, lastName, username, preferredCurrency, companyName, companyEmail, companyPhone, companyAddress, bankAddress FROM users WHERE id = ?',
+      sql: 'SELECT id, email, firstName, lastName, username, preferredCurrency, companyName, companyEmail, companyPhone, companyAddress, bankAddress, companyLogo FROM users WHERE id = ?',
       args: [userId]
     });
-    const user = resUser.rows[0];
-    res.json(Object.assign({}, user));
+    const user = Object.assign({}, resUser.rows[0]) as any;
+    // Rehydrate the reference back to a data URI for the client.
+    user.companyLogo = await resolveImageRef(userId, user.companyLogo);
+    res.json(user);
   } catch (error) {
+    logError('PUT /api/users/profile', error);
     res.status(500).json({ error: 'Server error' });
   }
 });
 
 // Update password
-router.put('/password', authenticate, rateLimit('password', 5, 15 * 60 * 1000), async (req: any, res: any) => {
+router.put('/password', authenticate, rateLimit('password', 5, 15 * 60 * 1000, (req) => (req as AuthedRequest).user?.id || ''), async (req: AuthedRequest, res) => {
   const parsed = parseBody(passwordSchema, req.body);
   if (parsed.error) return res.status(400).json({ error: parsed.error });
 
@@ -92,20 +63,20 @@ router.put('/password', authenticate, rateLimit('password', 5, 15 * 60 * 1000), 
     const resDb = await db.execute({ sql: 'SELECT password FROM users WHERE id = ?', args: [userId] });
     const user = resDb.rows[0] as any;
     if (!user || !user.password) {
-      return res.status(400).json({ error: 'El usuario no tiene una contraseña configurada (posiblemente inició sesión con Google)' });
+      return res.status(400).json({ error: 'This account has no password set (it may use Google sign-in)' });
     }
 
-    const bcrypt = require('bcryptjs');
     const isMatch = await bcrypt.compare(currentPassword, user.password as string);
     if (!isMatch) {
-      return res.status(400).json({ error: 'La contraseña actual es incorrecta' });
+      return res.status(400).json({ error: 'Current password is incorrect' });
     }
 
     const hashedPassword = await bcrypt.hash(newPassword, 10);
     await db.execute({ sql: 'UPDATE users SET password = ? WHERE id = ?', args: [hashedPassword, userId] });
 
-    res.json({ message: 'Contraseña actualizada exitosamente' });
+    res.json({ message: 'Password updated successfully' });
   } catch (error) {
+    logError('PUT /api/users/password', error);
     res.status(500).json({ error: 'Server error' });
   }
 });

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useBuilder } from '../../context/BuilderContext';
+import { useAuth } from '../../context/AuthContext';
 import DraggableItem from './DraggableItem';
 import {
   Building2, User, FileText, Table, Calculator,
@@ -12,7 +13,13 @@ import { useTranslation } from 'react-i18next';
 export default function Sidebar() {
   const { t } = useTranslation();
   const { settings, setSettings, data, setData } = useBuilder();
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<'elements' | 'data' | 'design'>('elements');
+
+  const companyLogo = user?.companyLogo || null;
+  // Offer the "use company logo" shortcut only when a profile logo exists and
+  // it isn't already the one applied to this invoice.
+  const canUseCompanyLogo = !!companyLogo && settings.logoUrl !== companyLogo;
 
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -22,6 +29,8 @@ export default function Sidebar() {
         setSettings({ ...settings, logoUrl: reader.result as string });
       };
       reader.readAsDataURL(file);
+      // Allow re-selecting the same file later.
+      e.target.value = '';
     }
   };
 
@@ -105,6 +114,16 @@ export default function Sidebar() {
                 <ImageIcon size={16} className="text-gray-400" />
                 {t('builder.design.companyLogo')}
               </h3>
+              {canUseCompanyLogo && (
+                <button
+                  type="button"
+                  onClick={() => setSettings({ ...settings, logoUrl: companyLogo })}
+                  className="mb-3 flex w-full items-center gap-3 rounded-lg border border-blue-200 bg-blue-50 p-2 text-left transition-colors hover:bg-blue-100"
+                >
+                  <img src={companyLogo as string} alt="" className="h-8 w-12 shrink-0 object-contain" />
+                  <span className="text-sm font-medium text-blue-800">{t('builder.design.useCompanyLogo')}</span>
+                </button>
+              )}
               <div className="flex items-center justify-center w-full">
                 <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100 transition-colors">
                   <div className="flex flex-col items-center justify-center pt-5 pb-6">

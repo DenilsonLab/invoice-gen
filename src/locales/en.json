@@ -8,6 +8,12 @@
     "loading": "Loading...",
     "genericError": "An error occurred. Please try again."
   },
+  "dialog": {
+    "confirm": "Confirm",
+    "cancel": "Cancel",
+    "confirmTitle": "Confirm action",
+    "dismiss": "Dismiss"
+  },
   "nav": {
     "dashboard": "My Invoices",
     "newInvoice": "New Invoice",
@@ -24,7 +30,9 @@
     "total": "Total:",
     "unnamed": "Unnamed",
     "loadingInvoices": "Loading invoices...",
-    "deleteConfirm": "Are you sure you want to delete this invoice?"
+    "deleteTitle": "Delete invoice",
+    "deleteConfirm": "Are you sure you want to delete this invoice?",
+    "deleteError": "Could not delete the invoice."
   },
   "clients": {
     "save": "Save client",
@@ -39,6 +47,7 @@
     "nameRequired": "Client name is required.",
     "saveError": "Could not save client.",
     "deleteError": "Could not delete client.",
+    "deleteTitle": "Delete client",
     "deleteConfirm": "Delete this saved client?"
   },
   "publicInvoice": {
@@ -74,6 +83,7 @@
       "orDrag": "or drag and drop",
       "logoFormats": "PNG, JPG, or SVG (Max 2MB)",
       "remove": "Remove",
+      "useCompanyLogo": "Use my company logo",
       "brandColor": "Brand Color",
       "typography": "Typography",
       "modern": "Inter (Modern)",
@@ -203,6 +213,11 @@
     "preferredCurrency": "Preferred Currency",
     "companyData": "Company Data (For Invoices)",
     "companyEmail": "Company Email",
+    "companyLogo": "Company Logo",
+    "companyLogoHint": "Used automatically on your new invoices. You can change it per invoice.",
+    "uploadLogo": "Upload logo",
+    "changeLogo": "Change logo",
+    "removeLogo": "Remove logo",
     "saveChanges": "Save Changes",
     "savedButton": "Saved",
     "savedTitle": "Changes saved",

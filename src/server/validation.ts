@@ -1,6 +1,16 @@
 import { z } from 'zod';
+import { sanitizeRichText } from './htmlSanitizer.js';
 
-const htmlString = z.string().max(20_000);
+// Rich-text HTML: cap the length first, then sanitize server-side so the
+// value persisted to the DB is already free of disallowed tags/content.
+const htmlString = z.string().max(20_000).transform(sanitizeRichText);
+
+// A logo value: either an inline base64 image data URI (capped at ~2MB) or a
+// short reference to a stored image (`img:<uuid>`) produced by the image store.
+const logoDataUrl = z.union([
+  z.string().startsWith('data:image/').max(2_000_000),
+  z.string().regex(/^img:[0-9a-fA-F-]{1,64}$/),
+]);
 const currencySchema = z.enum(['USD', 'EUR', 'GBP', 'MXN', 'ARS', 'COP', 'CLP', 'PEN']);
 
 export const registerSchema = z.object({
@@ -25,6 +35,7 @@ export const profileSchema = z.object({
   companyPhone: z.string().trim().max(50),
   companyAddress: z.string().trim().max(2_000),
   bankAddress: z.string().max(10_000),
+  companyLogo: logoDataUrl.nullable().optional(),
 });
 
 export const passwordSchema = z.object({
@@ -93,7 +104,7 @@ const invoiceBlockSchema = z.object({
 
 const invoiceSettingsSchema = z.object({
   brandColor: z.string().regex(/^#[0-9a-fA-F]{6}$/),
-  logoUrl: z.string().startsWith('data:image/').max(2_000_000).nullable(),
+  logoUrl: logoDataUrl.nullable(),
   fontFamily: z.string().max(200),
 });
 
@@ -107,6 +118,19 @@ export const invoicePayloadSchema = z.object({
 export const publicInvoiceParamsSchema = z.object({
   username: z.string().trim().min(1).max(40).regex(/^[a-zA-Z0-9_-]+$/),
   id: z.string().uuid(),
+});
+
+// Google OAuth token endpoint response (only the fields we rely on)
+export const googleTokenSchema = z.object({
+  access_token: z.string().min(1).max(4_096),
+});
+
+// Google userinfo endpoint response
+export const googleUserInfoSchema = z.object({
+  id: z.string().min(1).max(255),
+  email: z.string().trim().toLowerCase().email().max(320),
+  given_name: z.string().max(200).optional().default(''),
+  family_name: z.string().max(200).optional().default(''),
 });
 
 export const parseBody = <T>(schema: z.Schema<T>, body: unknown) => {

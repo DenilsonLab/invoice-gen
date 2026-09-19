@@ -8,6 +8,12 @@
     "loading": "Cargando...",
     "genericError": "Ocurrió un error. Inténtalo nuevamente."
   },
+  "dialog": {
+    "confirm": "Confirmar",
+    "cancel": "Cancelar",
+    "confirmTitle": "Confirmar acción",
+    "dismiss": "Descartar"
+  },
   "nav": {
     "dashboard": "Mis Facturas",
     "newInvoice": "Nueva Factura",
@@ -24,7 +30,9 @@
     "total": "Total:",
     "unnamed": "Sin nombre",
     "loadingInvoices": "Cargando facturas...",
-    "deleteConfirm": "¿Estás seguro de que deseas eliminar esta factura?"
+    "deleteTitle": "Eliminar factura",
+    "deleteConfirm": "¿Estás seguro de que deseas eliminar esta factura?",
+    "deleteError": "No se pudo eliminar la factura."
   },
   "clients": {
     "save": "Guardar cliente",
@@ -39,6 +47,7 @@
     "nameRequired": "El nombre del cliente es obligatorio.",
     "saveError": "No se pudo guardar el cliente.",
     "deleteError": "No se pudo eliminar el cliente.",
+    "deleteTitle": "Eliminar cliente",
     "deleteConfirm": "¿Eliminar este cliente guardado?"
   },
   "publicInvoice": {
@@ -74,6 +83,7 @@
       "orDrag": "o arrastra",
       "logoFormats": "PNG, JPG o SVG (Max. 2MB)",
       "remove": "Eliminar",
+      "useCompanyLogo": "Usar el logo de mi empresa",
       "brandColor": "Color de Marca",
       "typography": "Tipografía",
       "modern": "Inter (Moderno)",
@@ -203,6 +213,11 @@
     "preferredCurrency": "Moneda preferida",
     "companyData": "Datos de Empresa (Para Facturas)",
     "companyEmail": "Email de la Empresa",
+    "companyLogo": "Logo de la Empresa",
+    "companyLogoHint": "Se usará automáticamente en tus nuevas facturas. Podrás cambiarlo en cada factura.",
+    "uploadLogo": "Subir logo",
+    "changeLogo": "Cambiar logo",
+    "removeLogo": "Quitar logo",
     "saveChanges": "Guardar Cambios",
     "savedButton": "Guardado",
     "savedTitle": "Cambios guardados",
