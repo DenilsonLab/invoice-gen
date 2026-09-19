@@ -1,15 +1,38 @@
 @import "tailwindcss";
 @plugin "@tailwindcss/typography";
 
+/* Brand fonts: Space Grotesk for display/headings, Manrope for body/UI. */
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap');
+
+@theme {
+  /* Brand palette (Invoice Gen) */
+  --color-brand-500: #146EF5; /* primary blue */
+  --color-brand-400: #087FF5; /* secondary blue */
+  --color-brand-900: #173B78; /* deep robot blue */
+  --color-accent-500: #13C9A5; /* action turquoise */
+  --color-line-200: #B8C7E5; /* secondary lines */
+
+  --font-display: 'Space Grotesk', ui-sans-serif, system-ui, sans-serif;
+  --font-body: 'Manrope', ui-sans-serif, system-ui, sans-serif;
+}
+
 @media print {
   body {
     background-color: white !important;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
-  
+
   @page {
     margin: 0;
     size: A4;
   }
+}
+
+/* Subtle utility for the landing: a faint dotted/grid backdrop without heavy shadows. */
+.bg-grid-brand {
+  background-image:
+    linear-gradient(to right, rgba(184, 199, 229, 0.25) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(184, 199, 229, 0.25) 1px, transparent 1px);
+  background-size: 32px 32px;
 }

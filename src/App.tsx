@@ -12,6 +12,7 @@ import LanguageSwitcher from './components/LanguageSwitcher';
 import Logo from './components/Logo';
 
 // Lazy load heavy components
+const Landing = lazy(() => import('./pages/Landing'));
 const Login = lazy(() => import('./pages/Login'));
 const Register = lazy(() => import('./pages/Register'));
 const Dashboard = lazy(() => import('./pages/Dashboard'));
@@ -31,7 +32,15 @@ const LoadingFallback = () => (
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
   if (loading) return <LoadingFallback />;
-  return user ? <>{children}</> : <Navigate to="/login" />;
+  return user ? <>{children}</> : <Navigate to="/login" replace />;
+}
+
+// Routes that only make sense when logged OUT (login/register). If a session is
+// already active, send the user straight to the dashboard.
+function PublicOnlyRoute({ children }: { children: React.ReactNode }) {
+  const { user, loading } = useAuth();
+  if (loading) return <LoadingFallback />;
+  return user ? <Navigate to="/dashboard" replace /> : <>{children}</>;
 }
 
 function DocumentNameField() {
@@ -100,14 +109,14 @@ export default function App() {
         <Router>
           <Suspense fallback={<LoadingFallback />}>
             <Routes>
-            <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
+            <Route path="/login" element={<PublicOnlyRoute><Login /></PublicOnlyRoute>} />
+            <Route path="/register" element={<PublicOnlyRoute><Register /></PublicOnlyRoute>} />
             <Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
             <Route path="/profile" element={<PrivateRoute><Profile /></PrivateRoute>} />
             <Route path="/builder" element={<PrivateRoute><BuilderLayout /></PrivateRoute>} />
             <Route path="/builder/:id" element={<PrivateRoute><BuilderLayout /></PrivateRoute>} />
             <Route path="/:username/:invoiceId" element={<PublicInvoice />} />
-            <Route path="/" element={<Navigate to="/dashboard" />} />
+            <Route path="/" element={<Landing />} />
             </Routes>
           </Suspense>
         </Router>
